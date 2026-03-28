@@ -18,8 +18,9 @@ jobs:
     steps:
       - name: Install dependencies
         run: |
+          cat /etc/os-release
           apt-get update
-          apt-get install -y git curl wget clang zlib1g-dev dpkg-dev ca-certificates
+          apt-get install -y git curl wget clang zlib1g-dev dpkg-dev ca-certificates libicu-dev
 
       - name: Checkout code
         uses: actions/checkout@v4
@@ -31,10 +32,9 @@ jobs:
           ln -s ~/.dotnet/dotnet /usr/bin/dotnet
 
       - name: Publish AOT
+        shell: bash
         run: |
-          # 提取版本号，去掉前缀 v (Debian 规范要求版本号必须以数字开头)
           VERSION="${GITHUB_REF_NAME#v}"
-          # 如果是手动触发而非 Tag，给个默认版本防报错
           if [[ ! "$VERSION" =~ ^[0-9] ]]; then VERSION="0.0.1"; fi
 
           dotnet publish SeiriTUI/SeiriTUI.csproj \
@@ -46,6 +46,7 @@ jobs:
             -o ./publish
 
       - name: Build DEB package
+        shell: bash
         run: |
           mkdir -p package/usr/bin
           mkdir -p package/DEBIAN
