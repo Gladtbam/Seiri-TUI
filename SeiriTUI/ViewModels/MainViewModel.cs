@@ -143,12 +143,15 @@ public partial class MainViewModel : ObservableObject
         string finalRes = !string.IsNullOrWhiteSpace(item.Resolution) ? item.Resolution : GlobalResolution;
         string finalQa = !string.IsNullOrWhiteSpace(item.Quality) ? item.Quality : GlobalQuality;
 
-        // 5. 组凑可选标签：如 [WEBDL-1080p][x265 10bit]-ReleaseGroup
+        // 5. 组凑可选标签：如 [WEBDL-1080p][FLAC][x265 10bit]-ReleaseGroup
         string qr = "";
         var qrList = new List<string>();
         if (!string.IsNullOrWhiteSpace(finalQa)) qrList.Add(finalQa);
         if (!string.IsNullOrWhiteSpace(finalRes)) qrList.Add(finalRes);
         if (qrList.Count > 0) qr = $"[{string.Join("-", qrList)}]";
+
+        string ac = "";
+        if (!string.IsNullOrWhiteSpace(item.AudioCodec)) ac = $"[{item.AudioCodec}]";
 
         string cb = "";
         var cbList = new List<string>();
@@ -159,7 +162,7 @@ public partial class MainViewModel : ObservableObject
         string rg = "";
         if (!string.IsNullOrWhiteSpace(item.ReleaseGroup)) rg = $"-{item.ReleaseGroup}";
 
-        string tagString = $"{qr}{cb}{rg}";
+        string tagString = $"{qr}{ac}{cb}{rg}";
         if (!string.IsNullOrEmpty(tagString)) tagString = $" - {tagString}";
 
         // 6. 语言后缀：主要应用于外挂字幕 (音轨不需要后缀，即 .mka、.flac 不需要添加 .zh-Hans 后缀)

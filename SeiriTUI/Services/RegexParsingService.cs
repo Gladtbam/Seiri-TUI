@@ -35,6 +35,10 @@ public partial class RegexParsingService
     [GeneratedRegex(@"(?i)(8bit|10bit|12bit)", RegexOptions.Compiled)]
     private static partial Regex BitDepthRegex();
 
+    // 匹配音频编码 (FLAC, AAC, AC3, DTS, TrueHD, OPUS, MP3, EAC3)
+    [GeneratedRegex(@"(?i)(flac|aac|ac3|eac3|dts|truehd|ddp|opus|mp3)", RegexOptions.Compiled)]
+    private static partial Regex AudioCodecRegex();
+
     // 匹配发布组/压制组 (通常在文件最开头的方括号里 [VCB-Studio] ...)
     [GeneratedRegex(@"^\[([^\]]+)\]", RegexOptions.Compiled)]
     private static partial Regex ReleaseGroupRegex();
@@ -101,6 +105,13 @@ public partial class RegexParsingService
         if (bitDepthMatch.Success)
         {
             item.BitDepth = bitDepthMatch.Groups[1].Value.ToLower(); // 统一为 10bit
+        }
+
+        // 8. 音频编码
+        var audioMatch = AudioCodecRegex().Match(name);
+        if (audioMatch.Success)
+        {
+            item.AudioCodec = StandardizeAudioCodec(audioMatch.Groups[1].Value);
         }
 
         // 8. 解析字幕外挂语言等
@@ -183,5 +194,19 @@ public partial class RegexParsingService
         if (low == "hevc" || low == "h265") return "x265";
         if (low == "avc" || low == "h264") return "x264";
         return low;
+    }
+
+    private string StandardizeAudioCodec(string original)
+    {
+        string low = original.ToLowerInvariant();
+        if (low == "ddp" || low == "eac3") return "E-AC-3";
+        if (low == "truehd") return "TrueHD";
+        if (low == "ac3") return "AC-3";
+        if (low == "aac") return "AAC";
+        if (low == "flac") return "FLAC";
+        if (low == "dts") return "DTS";
+        if (low == "opus") return "OPUS";
+        if (low == "mp3") return "MP3";
+        return original.ToUpperInvariant();
     }
 }

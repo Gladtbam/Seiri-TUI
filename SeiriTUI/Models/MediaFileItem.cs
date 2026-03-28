@@ -47,6 +47,10 @@ public partial class MediaFileItem : ObservableObject
     [ObservableProperty]
     private string? _videoCodec;
 
+    /// <summary>音频编码格式 (如 FLAC, AAC, AC3)</summary>
+    [ObservableProperty]
+    private string? _audioCodec;
+
     /// <summary>色彩深度 (如 8bit, 10bit, 12bit)</summary>
     [ObservableProperty]
     private string? _bitDepth;
