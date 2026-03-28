@@ -125,14 +125,14 @@ public partial class MainViewModel : ObservableObject
             int index = MediaFiles.IndexOf(item);
             if (index >= 0)
             {
-                // 同名文件（去除语言后缀后）应当共享同个集号 (避免外挂字幕消耗掉独立的集号)
-                int distinctCount = MediaFiles.Take(index)
+                // 找出包括当前文件在内，一共出现过多少个【不同的底层文件组】
+                int distinctCount = MediaFiles.Take(index + 1)
                     .Select(f => GetBaseGroupKey(f))
                     .Distinct()
                     .Count();
-
-                // 当前项的集数 = 起始集数 + 它前面有几个【不同名的独特集】
-                episode = StartEpisode.Value + distinctCount;
+                
+                // 第 N 个不重复的文件组，它的偏移量就应该是 (N - 1)
+                episode = StartEpisode.Value + (distinctCount - 1);
             }
         }
 
