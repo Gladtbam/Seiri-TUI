@@ -21,9 +21,6 @@ public class FileOperationService
     [DllImport("Kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
     private static extern bool CreateHardLink(string lpFileName, string lpExistingFileName, IntPtr lpSecurityAttributes);
 
-    [DllImport("libc", SetLastError = true)]
-    private static extern int link(string oldpath, string newpath);
-
     public FileOperationService() { }
 
     /// <summary>
@@ -35,12 +32,14 @@ public class FileOperationService
         string? dir = Path.GetDirectoryName(finalPath);
         if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
         {
-            // 目标路径校验：由上层决定是否中断单文件操作
             Directory.CreateDirectory(dir);
         }
 
         string sourceRoot = GetVolumeRoot(Path.GetFullPath(fileItem.OriginalPath));
         string targetRoot = GetVolumeRoot(Path.GetFullPath(finalPath));
+
+        // 判断是否跨盘符/跨挂载点
+        bool isCrossDrive = !string.Equals(sourceRoot, targetRoot, StringComparison.OrdinalIgnoreCase);
 
         switch (mode)
         {
@@ -48,11 +47,14 @@ public class FileOperationService
                 // 运行在后台线程以避免卡死 UI
                 await Task.Run(() => File.Copy(fileItem.OriginalPath, finalPath, true));
                 break;
+
             case FileOpMode.Move:
-                await Task.Run(() => {
+                await Task.Run(() =>
+                {
                     if (File.Exists(finalPath)) File.Delete(finalPath);
+
                     // 保证原文件安全(Zero Corruption)：跨盘移动使用安全拷贝后删除机制
-                    if (sourceRoot != targetRoot)
+                    if (isCrossDrive)
                     {
                         File.Copy(fileItem.OriginalPath, finalPath, true);
                         File.Delete(fileItem.OriginalPath);
@@ -63,9 +65,10 @@ public class FileOperationService
                     }
                 });
                 break;
+
             case FileOpMode.HardLink:
                 // 硬链接跨盘校验：直接报错，绝不默默降级移动，破坏保种
-                if (sourceRoot != targetRoot)
+                if (isCrossDrive)
                 {
                     throw new IOException($"跨盘符不支持硬链接 ({sourceRoot} -> {targetRoot})");
                 }
@@ -76,18 +79,53 @@ public class FileOperationService
 
     /// <summary>
     /// 精准获取路径所在的物理分区/挂载点根目录 (兼容 Windows/Linux/macOS)
+    /// 修复了 Linux 统一下返回 "/" 的问题
     /// </summary>
     private string GetVolumeRoot(string fullPath)
     {
         try
         {
-            // .NET DriveInfo 原生支持跨平台将全路径解析为底层 Mount/Drive 的 Name
-            return new DriveInfo(fullPath).Name;
+            string targetPath = Path.GetFullPath(fullPath);
+            string bestMatch = string.Empty;
+
+            // Windows 盘符不区分大小写，Linux 挂载点区分大小写
+            bool isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
+            StringComparison comp = isWindows ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+
+            // 遍历系统中所有已挂载的驱动器
+            foreach (var drive in DriveInfo.GetDrives())
+            {
+                if (!drive.IsReady) continue;
+
+                string root = drive.RootDirectory.FullName;
+
+                // 如果文件的完整路径是以该挂载点开头
+                if (targetPath.StartsWith(root, comp))
+                {
+                    // 严格判定：防止类似 /mnt/data 错误匹配到 /mnt/data2/file 的情况
+                    bool isValidMatch = root.EndsWith(Path.DirectorySeparatorChar.ToString()) ||
+                                        targetPath.Length == root.Length ||
+                                        targetPath[root.Length] == Path.DirectorySeparatorChar;
+
+                    if (isValidMatch && root.Length > bestMatch.Length)
+                    {
+                        // 寻找匹配长度最长的挂载点 (比如 /mnt/data 优先于 /)
+                        bestMatch = root;
+                    }
+                }
+            }
+
+            if (!string.IsNullOrEmpty(bestMatch))
+            {
+                return bestMatch;
+            }
+
+            // Fallback (极少触发)
+            return Path.GetPathRoot(fullPath) ?? "";
         }
-        catch 
+        catch
         {
-            // Fallback，防止路径本身畸形导致 DriveInfo 实例化失败
-            return Path.GetPathRoot(fullPath)?.ToLowerInvariant() ?? "";
+            return Path.GetPathRoot(fullPath) ?? "";
         }
     }
 
@@ -104,17 +142,28 @@ public class FileOperationService
             if (!success)
             {
                 int error = Marshal.GetLastWin32Error();
-                throw new IOException($"跨盘符无法硬链接或权限错误 (CreateHardLink failed, err: {error})");
+                throw new IOException($"Windows硬链接创建失败或权限不足 (err: {error})");
             }
         }
         else
         {
-            // MacOS / Linux
-            int result = link(source, target);
-            if (result != 0)
+            using var process = new System.Diagnostics.Process();
+            process.StartInfo.FileName = "ln";
+
+            process.StartInfo.ArgumentList.Add(source);
+            process.StartInfo.ArgumentList.Add(target);
+
+            process.StartInfo.UseShellExecute = false;
+            process.StartInfo.CreateNoWindow = true;
+            process.StartInfo.RedirectStandardError = true;
+
+            process.Start();
+            process.WaitForExit();
+
+            if (process.ExitCode != 0)
             {
-                int error = Marshal.GetLastWin32Error();
-                throw new IOException($"跨盘符无法硬链接或权限错误 (link failed, err: {error})");
+                string errorMsg = process.StandardError.ReadToEnd().Trim();
+                throw new IOException($"跨盘符无法硬链接或权限错误 (ln 命令失败, ExitCode: {process.ExitCode}): {errorMsg}");
             }
         }
     }
