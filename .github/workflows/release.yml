@@ -1,0 +1,97 @@
+name: Build and Release DEB
+
+on:
+  push:
+    tags:
+      - 'v*' 
+
+jobs:
+  build-deb:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        debian: ['11', '12', '13']
+    
+    container:
+      image: debian:${{ matrix.debian }}
+
+    steps:
+      - name: Install dependencies
+        run: |
+          apt-get update
+          apt-get install -y git curl wget clang zlib1g-dev dpkg-dev ca-certificates
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install .NET SDK
+        run: |
+          wget https://dot.net/v1/dotnet-install.sh -O dotnet-install.sh
+          chmod +x ./dotnet-install.sh
+          ./dotnet-install.sh --channel 8.0 
+          ln -s ~/.dotnet/dotnet /usr/bin/dotnet
+
+      - name: Publish AOT
+        run: |
+          # 提取版本号，去掉前缀 v (Debian 规范要求版本号必须以数字开头)
+          VERSION="${GITHUB_REF_NAME#v}"
+          # 如果是手动触发而非 Tag，给个默认版本防报错
+          if [[ ! "$VERSION" =~ ^[0-9] ]]; then VERSION="0.0.1"; fi
+
+          dotnet publish SeiriTUI/SeiriTUI.csproj \
+            -c Release \
+            -r linux-x64 \
+            -p:PublishAot=true \
+            -p:Version=$VERSION \
+            --self-contained true \
+            -o ./publish
+
+      - name: Build DEB package
+        run: |
+          mkdir -p package/usr/bin
+          mkdir -p package/DEBIAN
+          cp ./publish/SeiriTUI package/usr/bin/seiritui
+          chmod +x package/usr/bin/seiritui
+
+          VERSION="${GITHUB_REF_NAME#v}"
+          if [[ ! "$VERSION" =~ ^[0-9] ]]; then VERSION="0.0.1"; fi
+
+          # 生成 control 元数据
+          cat <<EOF > package/DEBIAN/control
+          Package: seiritui
+          Version: $VERSION
+          Section: utils
+          Priority: optional
+          Architecture: amd64
+          Maintainer: gladtbam
+          Description: Modern TUI tool for media file organization.
+          EOF
+
+          # 打包时在文件名中标记目标系统版本
+          DEB_NAME="seiritui-debian${{ matrix.debian }}-x64.deb"
+          dpkg-deb --build package $DEB_NAME
+          
+          # 将生成的文件移到外层临时目录以便后续上传
+          mv $DEB_NAME /tmp/$DEB_NAME
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: deb-debian${{ matrix.debian }}
+          path: /tmp/seiritui-debian${{ matrix.debian }}-x64.deb
+
+  release:
+    needs: build-deb
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    steps:
+      - name: Download all DEBs
+        uses: actions/download-artifact@v4
+        with:
+          path: release-artifacts
+          merge-multiple: true
+
+      - name: Create Release and Upload Assets
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release-artifacts/*.deb
+          generate_release_notes: true
