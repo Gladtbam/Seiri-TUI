@@ -26,7 +26,7 @@ jobs:
           apt-get install -y git curl wget clang zlib1g-dev dpkg-dev ca-certificates libicu-dev
 
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Install .NET SDK
         run: |
           wget https://dot.net/v1/dotnet-install.sh -O dotnet-install.sh
@@ -53,15 +53,15 @@ jobs:
         run: |
           mkdir -p package/usr/bin
           mkdir -p package/DEBIAN
-          cp ./publish/SeiriTUI package/usr/bin/seiritui
-          chmod +x package/usr/bin/seiritui
+          cp ./publish/SeiriTUI package/usr/bin/seiri-tui
+          chmod +x package/usr/bin/seiri-tui
 
           VERSION="${GITHUB_REF_NAME#v}"
           if [[ ! "$VERSION" =~ ^[0-9] ]]; then VERSION="0.0.1"; fi
 
           # 生成 control 元数据
           cat <<EOF > package/DEBIAN/control
-          Package: seiritui
+          Package: seiri-tui
           Version: $VERSION
           Section: utils
           Priority: optional
@@ -71,14 +71,14 @@ jobs:
           EOF
 
           # 打包时在文件名中标记目标系统版本
-          DEB_NAME="seiritui-debian${{ matrix.debian }}-x64.deb"
+          DEB_NAME="seiri-tui-debian${{ matrix.debian }}-x64.deb"
           dpkg-deb --build package $DEB_NAME
           
           # 将生成的文件移到外层临时目录以便后续上传
           mv $DEB_NAME /tmp/$DEB_NAME
 
       - name: Upload Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: deb-debian${{ matrix.debian }}
           path: /tmp/seiritui-debian${{ matrix.debian }}-x64.deb
@@ -89,7 +89,7 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/')
     steps:
       - name: Download all DEBs
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           path: release-artifacts
           merge-multiple: true
