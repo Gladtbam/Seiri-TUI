@@ -81,7 +81,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: deb-debian${{ matrix.debian }}
-          path: /tmp/seiritui-debian${{ matrix.debian }}-x64.deb
+          path: /tmp/seiri-tui-debian${{ matrix.debian }}-x64.deb
 
   release:
     needs: build-deb
