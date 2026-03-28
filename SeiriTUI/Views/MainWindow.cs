@@ -37,6 +37,22 @@ public class MainWindow : Window
         };
 
         BuildUi();
+
+        // 提取系统被打包时写入的版本号 (Github Actions 中通过 -p:Version=x.y.z 注入)
+        string ver = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "dev";
+        if (ver.EndsWith(".0"))
+        {
+            var parts = ver.Split('.');
+            if (parts.Length > 2) ver = $"{parts[0]}.{parts[1]}.{parts[2]}";
+        }
+
+        var lblVersion = new Label($"v{ver}")
+        {
+            X = Pos.AnchorEnd(12),
+            Y = 0,
+            ColorScheme = new ColorScheme() { Normal = Application.Driver.MakeAttribute(Color.DarkGray, Color.Black) }
+        };
+        Add(lblVersion);
     }
 
     private void BuildUi()
@@ -99,12 +115,13 @@ public class MainWindow : Window
 
         var lblSourcePath = new Label("扫描源目录:") { X = 1, Y = 3 };
         var txtSourcePath = new TextField(Directory.GetCurrentDirectory()) { X = 16, Y = 3, Width = 45 };
-        
+
         var lblTargetPath = new Label("输出根路径:") { X = 1, Y = 4 };
         var txtTargetPath = new TextField(Directory.GetCurrentDirectory()) { X = 16, Y = 4, Width = 45 };
 
         var btnScan = new Button("执行扫描") { X = 65, Y = 3 };
-        btnScan.Clicked += () => {
+        btnScan.Clicked += () =>
+        {
             string SourcePath = txtSourcePath.Text.ToString() ?? "";
             ViewModel.LoadMediaFilesFromDirectory(SourcePath);
             ViewModel.TargetRootPath = SourcePath; // 自动将目标目录设为源目录
@@ -112,7 +129,8 @@ public class MainWindow : Window
             RefreshLists();
         };
 
-        txtTargetPath.TextChanged += (e) => {
+        txtTargetPath.TextChanged += (e) =>
+        {
             ViewModel.TargetRootPath = txtTargetPath.Text.ToString() ?? "";
             RefreshLists();
         };
@@ -133,19 +151,22 @@ public class MainWindow : Window
         btnExit.Clicked += () => Application.RequestStop();
 
         // 绑定实际的 IO 处理命令与刷新操作
-        btnMove.Clicked += async () => {
+        btnMove.Clicked += async () =>
+        {
             await ViewModel.ProcessMoveCommand.ExecuteAsync(null);
             Application.MainLoop.Invoke(() => { RefreshLists(); });
         };
-        btnCopy.Clicked += async () => {
+        btnCopy.Clicked += async () =>
+        {
             await ViewModel.ProcessCopyCommand.ExecuteAsync(null);
             Application.MainLoop.Invoke(() => { RefreshLists(); });
         };
-        btnLink.Clicked += async () => {
+        btnLink.Clicked += async () =>
+        {
             await ViewModel.ProcessHardLinkCommand.ExecuteAsync(null);
             Application.MainLoop.Invoke(() => { RefreshLists(); });
         };
-        
+
         btnPanel.Add(btnMove, btnCopy, btnLink, btnExit);
 
         topFrame.Add(lblShowName, txtShowName, lblSeason, txtSeason, lblStartEp, txtStartEp);
@@ -258,13 +279,15 @@ public class MainWindow : Window
             HotNormal = Application.Driver.MakeAttribute(Color.BrightRed, Color.Black)
         };
 
-        ViewModel.PropertyChanged += (s, e) => {
-            if (e.PropertyName == nameof(MainViewModel.GlobalStatusMessage)) 
+        ViewModel.PropertyChanged += (s, e) =>
+        {
+            if (e.PropertyName == nameof(MainViewModel.GlobalStatusMessage))
             {
-                Application.MainLoop.Invoke(() => {
+                Application.MainLoop.Invoke(() =>
+                {
                     string msg = ViewModel.GlobalStatusMessage ?? "";
                     statusMsgItem.Title = msg;
-                    
+
                     if (msg.Contains("错误") || msg.Contains("失败"))
                         statusBar.ColorScheme = errorTheme;
                     else
@@ -275,7 +298,8 @@ public class MainWindow : Window
             }
             else if (e.PropertyName == nameof(MainViewModel.SelectedItem))
             {
-                Application.MainLoop.Invoke(() => {
+                Application.MainLoop.Invoke(() =>
+                {
                     var curItem = ViewModel.SelectedItem;
                     if (curItem != null)
                     {
