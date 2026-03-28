@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="SeiriTUI/SeiriTUI.csproj" />
+  <Project Path="SeiriTUITests/SeiriTUITests.csproj" />
+</Solution>
