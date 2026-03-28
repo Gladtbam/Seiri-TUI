@@ -18,9 +18,9 @@
 
 ## 💻 技术栈与架构
 
-* **运行环境**：基于 .NET 8.0，支持 Windows / Linux / macOS 跨平台运行。
+* **运行环境**：基于 .NET 8.0，支持 Windows / Linux 跨平台运行。
 * **架构模式**：严格遵循 MVVM (Model-View-ViewModel) 架构模式，基于 `CommunityToolkit.Mvvm` 实现数据绑定与状态解耦。
-* **原生集成**：Windows 下调用 `Kernel32.dll` 原生 API 创建硬链接，Linux/macOS 下直接调用 `ln` 命令，摆脱 C 库碎片化限制，提供最稳健的兼容性。
+* **原生集成**：Windows 下调用 `Kernel32.dll` 原生 API 创建硬链接，Linux 下直接调用 `ln` 命令，摆脱 C 库碎片化限制，提供最稳健的兼容性。
 * **高性能发布**：支持启用 Native AOT (`PublishAot=true`) 编译，极致缩减体积并加速终端启动。
 
 ## 🚀 编译与运行
@@ -31,7 +31,7 @@
 ### 2. 本地构建与运行
 ```bash
 # 克隆仓库
-git clone [https://github.com/yourusername/Seiri-TUI.git](https://github.com/yourusername/Seiri-TUI.git)
+git clone https://github.com/Gladtbam/Seiri-TUI.git
 cd Seiri-TUI
 
 # 直接运行
@@ -50,7 +50,7 @@ dotnet publish SeiriTUI/SeiriTUI.csproj -c Release -r linux-x64 --self-contained
 
 # 4. GitHub Actions 自动构建
 
-GitHub Actions 将自动构建并发布 deb 包。在 Release 页面下载即可。
+GitHub Actions 将自动构建并发布 deb 包。在 Release 页面下载即可。Linux 终端执行 `seiri-tui` 即可运行。
 
 # 📖 使用指南
 
