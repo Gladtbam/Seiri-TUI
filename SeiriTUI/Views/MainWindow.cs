@@ -47,13 +47,28 @@ public class MainWindow : Window
             if (parts.Length > 2) ver = $"{parts[0]}.{parts[1]}.{parts[2]}";
         }
 
-        var lblVersion = new Label($"v{ver}")
+        var btnAbout = new Button("关于")
         {
-            X = Pos.AnchorEnd(12),
+            X = Pos.AnchorEnd(10),
             Y = 0,
-            ColorScheme = new ColorScheme() { Normal = Application.Driver.MakeAttribute(Color.DarkGray, Color.Black) }
+            // Button 本身自带主题，也可以单独赋色：
+            ColorScheme = new ColorScheme() { Normal = Application.Driver.MakeAttribute(Color.Gray, Color.Black) }
         };
-        Add(lblVersion);
+
+        btnAbout.Clicked += () =>
+        {
+            string aboutText =
+$@"Seiri-TUI · 现代化终端刮削辅助工具
+
+当前版本: v{ver}
+
+开发者: Gladtbam
+开源仓库: https://github.com/Gladtbam/Seiri-TUI";
+
+            MessageBox.Query("关于 (About)", aboutText, "确定");
+        };
+
+        Add(btnAbout);
     }
 
     private void BuildUi()
