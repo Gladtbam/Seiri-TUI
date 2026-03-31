@@ -13,12 +13,12 @@ namespace SeiriTUI.ViewModels;
 public partial class MainViewModel : ObservableObject
 {
     private readonly RegexParsingService _parsingService;
-    private readonly FileOperationService _fileOpsService;
+    private readonly IFileOperationService _fileOpsService;
 
-    public MainViewModel()
+    public MainViewModel(IFileOperationService fileOpsService)
     {
         _parsingService = new RegexParsingService();
-        _fileOpsService = new FileOperationService();
+        _fileOpsService = fileOpsService;
 
         // 绑定集合数据，便于 Terminal.Gui 以后对接
         MediaFiles = new ObservableCollection<MediaFileItem>();

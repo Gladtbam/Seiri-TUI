@@ -14,9 +14,10 @@ public enum FileOpMode
 }
 
 /// <summary>
+/// <summary>
 /// 服务：专职进行 IO 读写、硬链接等操作；拦截诸如不同盘符和权限错误。
 /// </summary>
-public class FileOperationService
+public class FileOperationService : IFileOperationService
 {
     [DllImport("Kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
     private static extern bool CreateHardLink(string lpFileName, string lpExistingFileName, IntPtr lpSecurityAttributes);

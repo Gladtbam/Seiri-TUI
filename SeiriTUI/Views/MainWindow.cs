@@ -26,7 +26,8 @@ public class MainWindow : Window
 
     public MainWindow() : base("SeiriTUI · Modern Edition")
     {
-        ViewModel = new MainViewModel();
+        var fileOpsService = new Services.FileOperationService();
+        ViewModel = new MainViewModel(fileOpsService);
 
         // 自定义现代化暗黑主题色 (类 VSCode/JetBrains 纯黑背景)
         ColorScheme = new ColorScheme()
