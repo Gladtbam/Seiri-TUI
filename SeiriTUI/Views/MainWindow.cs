@@ -14,6 +14,7 @@ public class MainWindow : Window
 
     private TextField _detailSeasonField;
     private TextField _detailEpisodeField;
+    private TextField _detailLanguageField;
     private ComboBox _detailResolutionCombo;
     private ComboBox _detailQualityCombo;
 
@@ -111,6 +112,14 @@ public class MainWindow : Window
             ViewModel.GlobalQuality = val == "(无)" ? "" : val;
             RefreshLists();
         };
+
+        var lblGlobalLang = new Label("默认字幕语言:") { X = 65, Y = 1 };
+        var txtGlobalLang = new TextField(ViewModel.DefaultSubtitleLanguage) { X = 77, Y = 1, Width = 8 };
+        txtGlobalLang.TextChanged += (e) =>
+        {
+            ViewModel.DefaultSubtitleLanguage = txtGlobalLang.Text.ToString() ?? "";
+            RefreshLists();
+        };
         // ===========================================
 
         var lblSourcePath = new Label("扫描源目录:") { X = 1, Y = 3 };
@@ -125,7 +134,7 @@ public class MainWindow : Window
             string SourcePath = txtSourcePath.Text.ToString() ?? "";
             ViewModel.LoadMediaFilesFromDirectory(SourcePath);
             ViewModel.TargetRootPath = SourcePath; // 自动将目标目录设为源目录
-            txtTargetPath.Text = SourcePath;       // 同步更新 UI 输入框，让用户清楚地看到路径重置了！
+            txtTargetPath.Text = SourcePath;       // 同步更新 UI 输入框
             RefreshLists();
         };
 
@@ -170,7 +179,7 @@ public class MainWindow : Window
         btnPanel.Add(btnMove, btnCopy, btnLink, btnExit);
 
         topFrame.Add(lblShowName, txtShowName, lblSeason, txtSeason, lblStartEp, txtStartEp);
-        topFrame.Add(lblGlobalRes, cbGlobalRes, lblGlobalQa, cbGlobalQa);
+        topFrame.Add(lblGlobalRes, cbGlobalRes, lblGlobalQa, cbGlobalQa, lblGlobalLang, txtGlobalLang);
         topFrame.Add(lblSourcePath, txtSourcePath, btnScan);
         topFrame.Add(lblTargetPath, txtTargetPath, cbAutoSeason, btnPanel);
 
@@ -254,13 +263,17 @@ public class MainWindow : Window
             UpdateSelectedItemProperty(prop => prop.Quality = val == "(无)" ? "" : val);
         };
 
+        var lblDetLang = new Label("语言后缀:") { X = Pos.Right(_detailQualityCombo) + 4, Y = 0 };
+        _detailLanguageField = new TextField("") { X = Pos.Right(lblDetLang) + 1, Y = 0, Width = 8 };
+        _detailLanguageField.TextChanged += (e) => UpdateSelectedItemProperty(prop => prop.Language = _detailLanguageField.Text.ToString());
+
         var lblFullSourceTitle = new Label("原名:") { X = 1, Y = 2 };
         _tvFullSource = new TextView() { X = Pos.Right(lblFullSourceTitle), Y = 2, Width = Dim.Fill(), Height = 2, ReadOnly = true, WordWrap = true };
 
         var lblFullTargetTitle = new Label("目标:") { X = 1, Y = 3 };
         _tvFullTarget = new TextView() { X = Pos.Right(lblFullTargetTitle), Y = 3, Width = Dim.Fill(), Height = 2, ReadOnly = true, WordWrap = true };
 
-        detailFrame.Add(lblDetSeason, _detailSeasonField, lblDetEp, _detailEpisodeField, lblDetRes, _detailResolutionCombo, lblDetQa, _detailQualityCombo);
+        detailFrame.Add(lblDetSeason, _detailSeasonField, lblDetEp, _detailEpisodeField, lblDetRes, _detailResolutionCombo, lblDetQa, _detailQualityCombo, lblDetLang, _detailLanguageField);
         detailFrame.Add(lblFullSourceTitle, _tvFullSource, lblFullTargetTitle, _tvFullTarget);
 
         // ======================= 最底部状态栏 =======================
@@ -346,6 +359,7 @@ public class MainWindow : Window
 
             _detailSeasonField.Text = item.Season?.ToString() ?? "";
             _detailEpisodeField.Text = item.Episode?.ToString() ?? "";
+            _detailLanguageField.Text = item.Language ?? "";
 
             // Sync Res Combo
             string res = string.IsNullOrEmpty(item.Resolution) ? "(无)" : item.Resolution;

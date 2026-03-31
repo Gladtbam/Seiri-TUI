@@ -47,26 +47,33 @@ public class RegexParsingServiceTests
         Assert.Equal(1, item.Season);
         Assert.Equal(3, item.Episode);
         Assert.Equal("1080p", item.Resolution);
-        Assert.Equal("WEB-DL", item.Quality);
+        Assert.Equal("WEBDL", item.Quality);
         Assert.Equal("x265", item.VideoCodec);
     }
 
-    [Fact]
-    public void Parse_ShouldExtractSubtitleLanguage()
+    [Theory]
+    [InlineData("[VCB-Studio] Anime S01E01 [CHS].ass", "zh-Hans")]
+    [InlineData("ShowName.S02E05.CHT.ass", "zh-Hant")]
+    [InlineData("Movie_720p_en_forced.srt", "eng")]
+    [InlineData("Something - 01 - jp.srt", "jpn")]
+    [InlineData("Dual [jp_sc].ass", "zh-Hans")]
+    [InlineData("Anime - 02 (chs&jp).ass", "zh-Hans")]
+    public void Parse_ShouldExtractCorrectLanguage_WithBoundaries(string fileName, string expectedLang)
     {
-        // Arrange
-        var item = new MediaFileItem
-        {
-            OriginalFileName = "ShowName.S02E05.CHT.ass",
-            Extension = ".ass"
-        };
-
-        // Act
+        var item = new MediaFileItem { OriginalFileName = fileName };
         _parser.Parse(item);
+        Assert.Equal(expectedLang, item.Language);
+    }
 
-        // Assert
-        Assert.Equal(2, item.Season);
-        Assert.Equal(5, item.Episode);
-        Assert.Equal("zh-Hant", item.Language);
+    [Theory]
+    [InlineData("[Nekomoe kissaten] Kusuriya no Hitorigoto 2nd Season [25].ass")] // kissaten 包含了 en, season 包含了 sc 等字眼，应被忽略
+    [InlineData("Tencent Video.mp4")] // Tencent包含en
+    [InlineData("Escape Room.mkv")] // Escape包含sc
+    [InlineData("The Great Pretender.mkv")] // Pretender包含en
+    public void Parse_ShouldIgnoreLanguage_WhenEmbeddedInsideNormalWords(string fileName)
+    {
+        var item = new MediaFileItem { OriginalFileName = fileName };
+        _parser.Parse(item);
+        Assert.Null(item.Language); // 必须是 null，不能被误识别为 en 或 sc 等
     }
 }

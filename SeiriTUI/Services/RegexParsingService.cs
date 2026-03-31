@@ -10,7 +10,6 @@ namespace SeiriTUI.Services;
 public partial class RegexParsingService
 {
     // ====== 编译期的正则表达式 (性能优化) ======
-    
     // 匹配 S01, Season 1 等
     [GeneratedRegex(@"(?i)(?:s|season)[\s\._\-]*(\d+)", RegexOptions.Compiled)]
     private static partial Regex SeasonRegex();
@@ -51,7 +50,7 @@ public partial class RegexParsingService
     public void Parse(MediaFileItem item)
     {
         string name = Path.GetFileNameWithoutExtension(item.OriginalFileName);
-        
+
         // 1. 尝试匹配压制组/发布组
         var rgMatch = ReleaseGroupRegex().Match(name);
         if (rgMatch.Success)
@@ -116,7 +115,7 @@ public partial class RegexParsingService
 
         // 8. 解析字幕外挂语言等
         item.Language = ParseLanguage(item.OriginalFileName);
-        
+
         // 9. 智能尝试猜测剧集名 (掐头去尾)
         item.ParsedShowName = GuessShowName(name);
     }
@@ -126,17 +125,17 @@ public partial class RegexParsingService
         // 抹除首个发布组
         var groupMatch = ReleaseGroupRegex().Match(name);
         int startIndex = groupMatch.Success ? groupMatch.Length : 0;
-        
+
         // 寻找第一次出现集号或季号，或者新方括号的地方
         var epMatch = EpisodeRegex().Match(name, startIndex);
         var seasonMatch = SeasonRegex().Match(name, startIndex);
         int firstBracket = name.IndexOf('[', startIndex);
-        
+
         int endIdx = name.Length;
         if (epMatch.Success && epMatch.Index < endIdx) endIdx = epMatch.Index;
         if (seasonMatch.Success && seasonMatch.Index < endIdx) endIdx = seasonMatch.Index;
         if (firstBracket != -1 && firstBracket < endIdx) endIdx = firstBracket;
-        
+
         if (endIdx > startIndex)
         {
             string show = name.Substring(startIndex, endIdx - startIndex).Trim();
@@ -152,14 +151,23 @@ public partial class RegexParsingService
     /// </summary>
     private string? ParseLanguage(string fileName)
     {
-        string nameLower = fileName.ToLowerInvariant();
-        
-        if (Regex.IsMatch(nameLower, @"(chs|gb|sc|zh-hans|简体)")) return "zh-Hans";
-        if (Regex.IsMatch(nameLower, @"(cht|big5|tc|zh-hant|繁体|正體)")) return "zh-Hant";
-        if (Regex.IsMatch(nameLower, @"(chs.*jp|jp.*chs|简日)")) return "zh-Hans"; 
-        if (Regex.IsMatch(nameLower, @"(cht.*jp|jp.*cht|繁日)")) return "zh-Hant";
-        if (Regex.IsMatch(nameLower, @"(eng|en|english)")) return "eng";
-        if (Regex.IsMatch(nameLower, @"(jap|jp|ja|japanese|日本語)")) return "jpn";
+        // 去除拓展名，纯看名称主体，并转小写
+        string nameLower = Path.GetFileNameWithoutExtension(fileName).ToLowerInvariant();
+
+        // 辅助检测函数：语言标识符往往被标点符号包围 (如 .en. / [TC] / -chs-)
+        // (?:\W|_|^) 代表前面必须是一个特殊的非字母数字字符（括号中划线点等），或是开头
+        // (?:\W|_|$) 代表后面必须是一个特殊的非字母数字字符，或是结尾
+        bool IsLang(string pattern)
+        {
+            return Regex.IsMatch(nameLower, $@"(?:\W|_|^){pattern}(?:\W|_|$)");
+        }
+
+        if (IsLang("(chs.*jp|jp.*chs|jp.*sc|简日)")) return "zh-Hans";
+        if (IsLang("(cht.*jp|jp.*cht|jp.*tc|繁日)")) return "zh-Hant";
+        if (IsLang("(chs|gb|sc|zh-hans|简体|简中)")) return "zh-Hans";
+        if (IsLang("(cht|big5|tc|zh-hant|繁体|正體|繁中)")) return "zh-Hant";
+        if (IsLang("(eng|en|english)")) return "eng";
+        if (IsLang("(jap|jp|ja|japanese|日本語)")) return "jpn";
 
         return null;
     }
@@ -183,7 +191,7 @@ public partial class RegexParsingService
         if (low.Contains("1080")) return "1080p";
         if (low.Contains("720")) return "720p";
         if (low.Contains("480")) return "480p";
-        
+
         // uppercase the 'p' if needed or keep standard lowercase 'P' 
         return original;
     }
