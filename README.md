@@ -4,6 +4,12 @@
 
 为了配合 PT 保种需求，程序支持三种操作模式：直接重命名（移动）、文件复制、以及创建硬链接（Hardlink）。
 
+## 📸 界面预览
+
+<p align="center">
+  <img src="screenshots/screenshot.png" alt="Seiri-TUI Interface Preview" width="800">
+</p>
+
 ## ✨ 核心特性
 
 * **智能正则刮削**：自动使用正则表达式扫描当前目录，提取剧集名称、季数、集数、分辨率等信息。支持识别外挂字幕中的语言标签并转化为标准代码（如 `CHS` -> `zh-Hans`）。
@@ -15,13 +21,6 @@
   * **Zero Corruption**：移动操作在跨盘时采用安全拷贝后删除的机制，确保原文件绝对不被损坏。
   * **跨盘硬链接阻断**：严格比对源与目标的底层挂载点，遇到跨盘硬链接直接拦截并报错，绝不降级为移动操作，完美保护 PT 做种状态。
 * **高效直观的 TUI 交互**：基于 `Terminal.Gui` 构建现代化暗黑主题界面。提供左右 1:1 对称比对视图，即时预览重命名结果。
-
-## 💻 技术栈与架构
-
-* **运行环境**：基于 .NET 8.0，支持 Windows / Linux 跨平台运行。
-* **架构模式**：严格遵循 MVVM (Model-View-ViewModel) 架构模式，基于 `CommunityToolkit.Mvvm` 实现数据绑定与状态解耦。
-* **原生集成**：Windows 下调用 `Kernel32.dll` 原生 API 创建硬链接，Linux 下直接调用 `ln` 命令，摆脱 C 库碎片化限制，提供最稳健的兼容性。
-* **高性能发布**：支持启用 Native AOT (`PublishAot=true`) 编译，极致缩减体积并加速终端启动。
 
 ## 🚀 编译与运行
 
@@ -71,5 +70,5 @@ GitHub Actions 将自动构建并发布 deb 包。在 Release 页面下载即可
 
 # 📄 许可证
 
-本项目采用 **GNU General Public License v3.0 (GPL-3.0)** 进行授权。
+本项目采用 [**GNU General Public License v3.0 (GPL-3.0)**](LICENSE) 进行授权。  
 每个人都有权复制、分发和修改该程序，但必须在相同协议下开源其衍生作品，且严禁将其并入专有软件。
