@@ -51,6 +51,10 @@ public partial class MediaFileItem : ObservableObject
     [ObservableProperty]
     private string? _audioCodec;
 
+    /// <summary>音频声道 (如 5.1, 2.0)</summary>
+    [ObservableProperty]
+    private string? _audioChannel;
+
     /// <summary>色彩深度 (如 8bit, 10bit, 12bit)</summary>
     [ObservableProperty]
     private string? _bitDepth;

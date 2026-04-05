@@ -151,7 +151,10 @@ public partial class MainViewModel : ObservableObject
         if (qrList.Count > 0) qr = $"[{string.Join("-", qrList)}]";
 
         string ac = "";
-        if (!string.IsNullOrWhiteSpace(item.AudioCodec)) ac = $"[{item.AudioCodec}]";
+        var acList = new List<string>();
+        if (!string.IsNullOrWhiteSpace(item.AudioCodec)) acList.Add(item.AudioCodec);
+        if (!string.IsNullOrWhiteSpace(item.AudioChannel)) acList.Add(item.AudioChannel);
+        if (acList.Count > 0) ac = $"[{string.Join(" ", acList)}]";
 
         string cb = "";
         var cbList = new List<string>();

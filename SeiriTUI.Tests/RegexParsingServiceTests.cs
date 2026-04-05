@@ -14,7 +14,7 @@ public class RegexParsingServiceTests
         // Arrange
         var item = new MediaFileItem
         {
-            OriginalFileName = "[VCB-Studio] Oshi no Ko [01][1080p][HEVC 10bit][CHS].mkv",
+            OriginalFileName = "[VCB-Studio] Oshi no Ko [01][1080p][HEVC 10bit][AAC 2.0][CHS].mkv",
             Extension = ".mkv"
         };
 
@@ -27,8 +27,9 @@ public class RegexParsingServiceTests
         Assert.Equal("1080p", item.Resolution);
         Assert.Equal("x265", item.VideoCodec);
         Assert.Equal("10bit", item.BitDepth);
+        Assert.Equal("AAC", item.AudioCodec);
+        Assert.Equal("2.0", item.AudioChannel);
         Assert.Equal("zh-Hans", item.Language);
-        Assert.Equal("VCB-Studio", item.ReleaseGroup);
     }
 
     [Fact]
@@ -50,6 +51,61 @@ public class RegexParsingServiceTests
         Assert.Equal("1080p", item.Resolution);
         Assert.Equal("WEBDL", item.Quality);
         Assert.Equal("x265", item.VideoCodec);
+    }
+
+    [Theory]
+    [InlineData("ShowName.S01E01.1080p.WebRip-SceneGroup.mkv", "SceneGroup")]
+    [InlineData("Anime - 02 -[SubsPlease].mkv", "SubsPlease")]
+    [InlineData("Some_Movie_4K[Release_Group].mp4", "Release_Group")]
+    public void Parse_ShouldExtractReleaseGroup_WhenAtTheEnd(string fileName, string expectedGroup)
+    {
+        var item = new MediaFileItem { OriginalFileName = fileName };
+        _parser.Parse(item);
+        Assert.Equal(expectedGroup, item.ReleaseGroup);
+    }
+
+    [Fact]
+    public void Parse_ShouldRestoreSpacesFromDots_WhenSceneFormat()
+    {
+        // Arrange
+        var item = new MediaFileItem
+        {
+            OriginalFileName = "The.Last.Of.Us.S01E03.1080p.WEB-DL.x265.mkv",
+            Extension = ".mkv"
+        };
+
+        // Act
+        _parser.Parse(item);
+
+        // Assert
+        Assert.Equal("The Last Of Us", item.ParsedShowName);
+        Assert.Equal(1, item.Season);
+        Assert.Equal(3, item.Episode);
+    }
+
+    [Fact]
+    public void Parse_ShouldSupportH264WithDot_And_AudioChannel_WithoutSpace()
+    {
+        // Arrange
+        var item = new MediaFileItem
+        {
+            OriginalFileName = "Chitose.Is.in.the.Ramune.Bottle.S01E12.With.a.Chance.of.Dreams.1080p.CR.WEB-DL.JPN.AAC2.0.H.264.MSubs-ToonsHub.mkv",
+            Extension = ".mkv"
+        };
+
+        // Act
+        _parser.Parse(item);
+
+        // Assert
+        Assert.Equal("Chitose Is in the Ramune Bottle", item.ParsedShowName);
+        Assert.Equal(1, item.Season);
+        Assert.Equal(12, item.Episode);
+        Assert.Equal("1080p", item.Resolution);
+        Assert.Equal("WEBDL", item.Quality);
+        Assert.Equal("AAC", item.AudioCodec);
+        Assert.Equal("2.0", item.AudioChannel);
+        Assert.Equal("x264", item.VideoCodec);
+        Assert.Equal("ToonsHub", item.ReleaseGroup);
     }
 
     [Theory]

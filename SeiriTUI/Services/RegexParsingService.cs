@@ -26,8 +26,8 @@ public partial class RegexParsingService
     [GeneratedRegex(@"(?i)(bluray|bdrip|web-?dl|web-?rip|hdtv|dvdrip)", RegexOptions.Compiled)]
     private static partial Regex QualityRegex();
 
-    // 匹配编码 (x264, x265, h264, h265, hevc, avc)
-    [GeneratedRegex(@"(?i)(x264|x265|h264|h265|hevc|avc)", RegexOptions.Compiled)]
+    // 匹配编码 (x264, x265, h264, h265, hevc, avc, h.264, h.265)
+    [GeneratedRegex(@"(?i)(x264|x265|h\.?264|h\.?265|hevc|avc)", RegexOptions.Compiled)]
     private static partial Regex VideoCodecRegex();
 
     // 匹配色彩深度 (8bit, 10bit, 12bit)
@@ -38,9 +38,21 @@ public partial class RegexParsingService
     [GeneratedRegex(@"(?i)(flac|aac|ac3|eac3|dts|truehd|ddp|opus|mp3)", RegexOptions.Compiled)]
     private static partial Regex AudioCodecRegex();
 
+    // 匹配音频声道 (7.1, 5.1, 2.1, 2.0)
+    [GeneratedRegex(@"(?i)(7\.1|5\.1|2\.1|2\.0)", RegexOptions.Compiled)]
+    private static partial Regex AudioChannelRegex();
+
     // 匹配发布组/压制组 (通常在文件最开头的方括号里 [VCB-Studio] ...)
     [GeneratedRegex(@"^\[([^\]]+)\]", RegexOptions.Compiled)]
     private static partial Regex ReleaseGroupRegex();
+
+    // 匹配后缀括号发布组 (如 -[SubsPlease] 或 [SubsPlease] 在结尾)
+    [GeneratedRegex(@"(?:- ?\[|\[)([^\]]+)\]$", RegexOptions.Compiled)]
+    private static partial Regex SuffixBracketReleaseGroupRegex();
+
+    // 匹配后缀横杠发布组 (如 -NTb 在结尾)
+    [GeneratedRegex(@"-([a-zA-Z][a-zA-Z0-9_-]*)$", RegexOptions.Compiled)]
+    private static partial Regex SuffixDashReleaseGroupRegex();
 
     public RegexParsingService() { }
 
@@ -51,11 +63,29 @@ public partial class RegexParsingService
     {
         string name = Path.GetFileNameWithoutExtension(item.OriginalFileName);
 
-        // 1. 尝试匹配压制组/发布组
+        // 1. 尝试匹配前置压制组/发布组
         var rgMatch = ReleaseGroupRegex().Match(name);
         if (rgMatch.Success)
         {
-            item.ReleaseGroup = rgMatch.Groups[1].Value;
+            item.ReleaseGroup = rgMatch.Groups[1].Value.Trim();
+        }
+        else
+        {
+            // 尝试匹配后置发布组 (方括号风格)
+            var suffixBracketMatch = SuffixBracketReleaseGroupRegex().Match(name);
+            if (suffixBracketMatch.Success)
+            {
+                item.ReleaseGroup = suffixBracketMatch.Groups[1].Value.Trim();
+            }
+            else
+            {
+                // 尝试匹配后置发布组 (横向风格)
+                var suffixDashMatch = SuffixDashReleaseGroupRegex().Match(name);
+                if (suffixDashMatch.Success)
+                {
+                    item.ReleaseGroup = suffixDashMatch.Groups[1].Value.Trim();
+                }
+            }
         }
 
         // 2. 尝试匹配季数 (Season)
@@ -113,10 +143,17 @@ public partial class RegexParsingService
             item.AudioCodec = StandardizeAudioCodec(audioMatch.Groups[1].Value);
         }
 
-        // 8. 解析字幕外挂语言等
+        // 8.5 音频声道
+        var channelMatch = AudioChannelRegex().Match(name);
+        if (channelMatch.Success)
+        {
+            item.AudioChannel = channelMatch.Groups[1].Value;
+        }
+
+        // 9. 解析字幕外挂语言等
         item.Language = ParseLanguage(item.OriginalFileName);
 
-        // 9. 智能尝试猜测剧集名 (掐头去尾)
+        // 10. 智能尝试猜测剧集名 (掐头去尾)
         item.ParsedShowName = GuessShowName(name);
     }
 
@@ -139,8 +176,13 @@ public partial class RegexParsingService
         if (endIdx > startIndex)
         {
             string show = name.Substring(startIndex, endIdx - startIndex).Trim();
+            // 还原 Scene 格式下被 . 替代的空格
+            show = show.Replace(".", " ");
             // 去除可能遗留的下划线或短横线
             show = Regex.Replace(show, @"^[-_]+|[-_]+$", "").Trim();
+            // 处理多个连续空格的情况
+            show = Regex.Replace(show, @"\s+", " ").Trim();
+            
             if (!string.IsNullOrEmpty(show)) return show;
         }
         return null;
@@ -199,8 +241,8 @@ public partial class RegexParsingService
     private string StandardizeCodec(string original)
     {
         string low = original.ToLowerInvariant();
-        if (low == "hevc" || low == "h265") return "x265";
-        if (low == "avc" || low == "h264") return "x264";
+        if (low == "hevc" || low == "h265" || low == "h.265") return "x265";
+        if (low == "avc" || low == "h264" || low == "h.264") return "x264";
         return low;
     }
 
