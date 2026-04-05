@@ -2,7 +2,7 @@ using SeiriTUI.Models;
 using SeiriTUI.Services;
 using Xunit;
 
-namespace SeiriTUITests;
+namespace SeiriTUI.Tests;
 
 public class RegexParsingServiceTests
 {
@@ -28,6 +28,7 @@ public class RegexParsingServiceTests
         Assert.Equal("x265", item.VideoCodec);
         Assert.Equal("10bit", item.BitDepth);
         Assert.Equal("zh-Hans", item.Language);
+        Assert.Equal("VCB-Studio", item.ReleaseGroup);
     }
 
     [Fact]

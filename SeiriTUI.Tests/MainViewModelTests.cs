@@ -6,7 +6,7 @@ using SeiriTUI.Services;
 using SeiriTUI.ViewModels;
 using Xunit;
 
-namespace SeiriTUITests;
+namespace SeiriTUI.Tests;
 
 // 手写一个极为轻量的 Mock 用于规避真实的磁盘 IO
 public class MockFileOperationService : IFileOperationService
