@@ -11,13 +11,29 @@ jobs:
   test:
     name: Run Tests
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
+      short_sha: ${{ steps.meta.outputs.short_sha }}
+      ver_base: ${{ steps.meta.outputs.ver_base }}
     steps:
     - uses: actions/checkout@v6
       with:
         fetch-depth: 0
 
+    - name: Get metadata
+      id: meta
+      shell: bash
+      run: |
+        LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "0.1.0")
+        SHORT_SHA=$(git rev-parse --short HEAD)
+        VERSION="${LATEST_TAG#v}-$SHORT_SHA"
+        VER_BASE="${LATEST_TAG#v}"
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "short_sha=$SHORT_SHA" >> $GITHUB_OUTPUT
+        echo "ver_base=$VER_BASE" >> $GITHUB_OUTPUT
+
     - name: Setup .NET
-      uses: actions/setup-dotnet@v4
+      uses: actions/setup-dotnet@v5
       with:
         dotnet-version: 8.0.x
 
@@ -32,6 +48,7 @@ jobs:
 
   build-artifact:
     name: Build DEB Artifact
+    needs: test
     runs-on: ubuntu-latest
     container:
       image: debian:bullseye
@@ -43,8 +60,6 @@ jobs:
 
       - name: Checkout code
         uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
 
       - name: Install .NET SDK
         run: |
@@ -56,25 +71,21 @@ jobs:
       - name: Build and Package
         shell: bash
         run: |
-          # 1. 获取最近的 Tag 并生成带 Hash 的版本号
-          # 如果没有 tag，默认使用 0.1.0 加上 hash
-          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "0.1.0")
-          SHORT_SHA=$(git rev-parse --short HEAD)
-          VERSION="${LATEST_TAG#v}-$SHORT_SHA"
+          VERSION="${{ needs.test.outputs.version }}"
+          VER_BASE="${{ needs.test.outputs.ver_base }}"
+          SHORT_SHA="${{ needs.test.outputs.short_sha }}"
           
           echo "Building Version: $VERSION"
           
-          # 2. Publish AOT
           dotnet publish SeiriTUI/SeiriTUI.csproj \
             -c Release \
             -r linux-x64 \
             -p:PublishAot=true \
             -p:Version-Suffix=$SHORT_SHA \
-            -p:Version=${VERSION%-*} \
+            -p:Version=$VER_BASE \
             --self-contained true \
             -o ./publish
 
-          # 3. Build DEB package
           mkdir -p package/usr/bin
           mkdir -p package/DEBIAN
           cp ./publish/SeiriTUI package/usr/bin/seiri-tui
