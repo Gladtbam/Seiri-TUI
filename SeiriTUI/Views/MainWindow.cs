@@ -140,9 +140,11 @@ $@"Seiri-TUI · 现代化终端刮削辅助工具
 
         var lblSourcePath = new Label("扫描源目录:") { X = 1, Y = 3 };
         var txtSourcePath = new TextField(Directory.GetCurrentDirectory()) { X = 16, Y = 3, Width = 45 };
+        SetupPathAutocomplete(txtSourcePath);
 
         var lblTargetPath = new Label("输出根路径:") { X = 1, Y = 4 };
         var txtTargetPath = new TextField(Directory.GetCurrentDirectory()) { X = 16, Y = 4, Width = 45 };
+        SetupPathAutocomplete(txtTargetPath);
 
         var btnScan = new Button("执行扫描") { X = 65, Y = 3 };
         btnScan.Clicked += () =>
@@ -402,5 +404,64 @@ $@"Seiri-TUI · 现代化终端刮削辅助工具
 
         _leftListView.SetSource(leftSource);
         _rightListView.SetSource(rightSource);
+    }
+
+    /// <summary>
+    /// 为 TextField 绑定文件路径补全能力 (支持键盘和点击选取)
+    /// </summary>
+    private void SetupPathAutocomplete(TextField textField)
+    {
+        // 确保使用弹窗样式的自动补全 (默认包含)
+        if (textField.Autocomplete != null)
+        {
+            textField.Autocomplete.AllSuggestions = new List<string>();
+
+            // 监听输入动态生成候选项
+            textField.TextChanged += (e) =>
+            {
+                try
+                {
+                    string currentText = textField.Text.ToString() ?? "";
+                    if (string.IsNullOrWhiteSpace(currentText)) return;
+
+                    string dir = Path.GetDirectoryName(currentText) ?? "";
+                    string prefix = Path.GetFileName(currentText) ?? "";
+
+                    if (string.IsNullOrEmpty(dir))
+                    {
+                        // 处理当前位于根目录或无路径符的情况
+                        if (!currentText.Contains(Path.DirectorySeparatorChar) && !currentText.Contains(Path.AltDirectorySeparatorChar))
+                        {
+                            dir = Directory.GetCurrentDirectory();
+                            prefix = currentText;
+                        }
+                        else
+                        {
+                            dir = currentText; // 例如输入了 "D:\" 此时 prefix==""
+                        }
+                    }
+
+                    if (Directory.Exists(dir))
+                    {
+                        // 防止出现带有无效字符（如 ":"）引发 ArgumentException 的情况
+                        // 即用户输入 "D:" 时，不作为前缀去当前目录搜索
+                        if (prefix.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+                        {
+                            return;
+                        }
+
+                        var directories = Directory.GetDirectories(dir, prefix + "*")
+                            .Select(d => Path.GetFileName(d) + Path.DirectorySeparatorChar)
+                            .ToList();
+                        
+                        textField.Autocomplete.AllSuggestions = directories;
+                    }
+                }
+                catch
+                {
+                    // 忽略驱动器未就绪或无权限异常
+                }
+            };
+        }
     }
 }
