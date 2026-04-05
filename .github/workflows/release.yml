@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        debian: ['11', '12', '13']
+        debian: ['bullseye', 'bookworm', 'trixie']
     
     container:
       image: debian:${{ matrix.debian }}
@@ -33,18 +33,22 @@ jobs:
           chmod +x ./dotnet-install.sh
           ./dotnet-install.sh --channel 8.0 
           ln -s ~/.dotnet/dotnet /usr/bin/dotnet
-
-      - name: Publish AOT
+      
+      - name: Set version
         shell: bash
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
           if [[ ! "$VERSION" =~ ^[0-9] ]]; then VERSION="0.0.1"; fi
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
 
+      - name: Publish AOT
+        shell: bash
+        run: |
           dotnet publish SeiriTUI/SeiriTUI.csproj \
             -c Release \
             -r linux-x64 \
             -p:PublishAot=true \
-            -p:Version=$VERSION \
+            -p:Version=${{ env.VERSION }} \
             --self-contained true \
             -o ./publish
 
@@ -56,13 +60,10 @@ jobs:
           cp ./publish/SeiriTUI package/usr/bin/seiri-tui
           chmod +x package/usr/bin/seiri-tui
 
-          VERSION="${GITHUB_REF_NAME#v}"
-          if [[ ! "$VERSION" =~ ^[0-9] ]]; then VERSION="0.0.1"; fi
-
           # 生成 control 元数据
           cat <<EOF > package/DEBIAN/control
           Package: seiri-tui
-          Version: $VERSION
+          Version: ${{ env.VERSION }}
           Section: utils
           Priority: optional
           Architecture: amd64
@@ -71,7 +72,7 @@ jobs:
           EOF
 
           # 打包时在文件名中标记目标系统版本
-          DEB_NAME="seiri-tui-debian${{ matrix.debian }}-x64.deb"
+          DEB_NAME="seiri-tui_${{ env.VERSION }}_debian-${{ matrix.debian }}-x64.deb"
           dpkg-deb --build package $DEB_NAME
           
           # 将生成的文件移到外层临时目录以便后续上传
@@ -81,7 +82,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: deb-debian${{ matrix.debian }}
-          path: /tmp/seiri-tui-debian${{ matrix.debian }}-x64.deb
+          path: /tmp/seiri-tui_${{ env.VERSION }}_debian-${{ matrix.debian }}-x64.deb
 
   release:
     needs: build-deb
