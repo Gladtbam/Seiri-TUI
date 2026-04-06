@@ -108,6 +108,47 @@ public class RegexParsingServiceTests
         Assert.Equal("ToonsHub", item.ReleaseGroup);
     }
 
+    [Fact]
+    public void Parse_ShouldExtractEpisodesWithChineseJapaneseFormats()
+    {
+        // Arrange
+        var item = new MediaFileItem
+        {
+            OriginalFileName = "[Snow-Raws] ハイスクールDxD 第12話 (BD 1920x1080 HEVC-YUV420P10 FLAC).mkv",
+            Extension = ".mkv"
+        };
+
+        // Act
+        _parser.Parse(item);
+
+        // Assert
+        Assert.Equal(12, item.Episode);
+        Assert.Equal("Snow-Raws", item.ReleaseGroup);
+        Assert.Equal("1080p", item.Resolution);
+        Assert.Equal("BD", item.Quality);
+        Assert.Equal("x265", item.VideoCodec);
+        Assert.Equal("10bit", item.BitDepth);
+        Assert.Equal("FLAC", item.AudioCodec);
+    }
+
+    [Fact]
+    public void Parse_ShouldExtractAudioChannelWithoutConfusion()
+    {
+        var item = new MediaFileItem
+        {
+            OriginalFileName = "You.and.I.Are.Polar.Opposites.S01E11.Class.Trip.Part.2.1080p.CR.WEB-DL.DUAL.AAC2.0.H.264-VARYG.mkv",
+            Extension = ".mkv"
+        };
+
+        _parser.Parse(item);
+
+        Assert.Equal("2.0", item.AudioChannel);
+        Assert.Equal("1080p", item.Resolution);
+        Assert.Equal("x264", item.VideoCodec);
+        Assert.Equal("AAC", item.AudioCodec);
+        Assert.Equal("VARYG", item.ReleaseGroup);
+    }
+
     [Theory]
     [InlineData("[VCB-Studio] Anime S01E01 [CHS].ass", "zh-Hans")]
     [InlineData("ShowName.S02E05.CHT.ass", "zh-Hant")]

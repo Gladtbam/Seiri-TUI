@@ -10,28 +10,28 @@ namespace SeiriTUI.Services;
 public partial class RegexParsingService
 {
     // ====== 编译期的正则表达式 (性能优化) ======
-    // 匹配 S01, Season 1 等
-    [GeneratedRegex(@"(?i)(?:s|season)[\s\._\-]*(\d+)", RegexOptions.Compiled)]
+    // 匹配 S01, Season 1 等，支持 第X季
+    [GeneratedRegex(@"(?i)(?:s|season)[\s\._\-]*(\d+)|第\s*(\d+)\s*季", RegexOptions.Compiled)]
     private static partial Regex SeasonRegex();
 
-    // 匹配 E01, EP01, [01], - 01 等 (排除压制组等干扰)
-    [GeneratedRegex(@"(?i)(?:e|ep|episode)[\s\._\-]*(\d+)|(?<=\s|^|\[|-)0*(\d{1,4})(?=\s|$|\]|-)", RegexOptions.Compiled)]
+    // 匹配 E01, EP01, [01], - 01 等，支持 第X集/话/話 (排除压制组等干扰)
+    [GeneratedRegex(@"(?i)(?:e|ep|episode)[\s\._\-]*(\d+)|第\s*(\d+)\s*(?:话|話|集)|(?<=\s|^|\[|-)0*(\d{1,4})(?=\s|$|\]|-)", RegexOptions.Compiled)]
     private static partial Regex EpisodeRegex();
 
-    // 匹配分辨率 (1080p, 2160p, 4k, 720p)
-    [GeneratedRegex(@"(?i)(1080[pi]|720[pi]|2160[pi]|4k|8k)", RegexOptions.Compiled)]
+    // 匹配分辨率 (1080p, 2160p, 4k, 720p, 1920x1080等)
+    [GeneratedRegex(@"(?i)(1080[pi]|720[pi]|2160[pi]|4k|8k|1920x1080|1280x720|3840x2160)", RegexOptions.Compiled)]
     private static partial Regex ResolutionRegex();
 
-    // 匹配来源/质量 (BluRay, BDRip, WEB-DL, WEBRip, HDTV)
-    [GeneratedRegex(@"(?i)(bluray|bdrip|web-?dl|web-?rip|hdtv|dvdrip)", RegexOptions.Compiled)]
+    // 匹配来源/质量 (BluRay, BDRip, WEB-DL, WEBRip, HDTV, BD)
+    [GeneratedRegex(@"(?i)(bluray|bdrip|web-?dl|web-?rip|hdtv|dvdrip|\bbd\b)", RegexOptions.Compiled)]
     private static partial Regex QualityRegex();
 
     // 匹配编码 (x264, x265, h264, h265, hevc, avc, h.264, h.265)
     [GeneratedRegex(@"(?i)(x264|x265|h\.?264|h\.?265|hevc|avc)", RegexOptions.Compiled)]
     private static partial Regex VideoCodecRegex();
 
-    // 匹配色彩深度 (8bit, 10bit, 12bit)
-    [GeneratedRegex(@"(?i)(8bit|10bit|12bit)", RegexOptions.Compiled)]
+    // 匹配色彩深度 (8bit, 10bit, 12bit, p8, p10)
+    [GeneratedRegex(@"(?i)(8bit|10bit|12bit|p8|p10)", RegexOptions.Compiled)]
     private static partial Regex BitDepthRegex();
 
     // 匹配音频编码 (FLAC, AAC, AC3, DTS, TrueHD, OPUS, MP3, EAC3)
@@ -39,7 +39,7 @@ public partial class RegexParsingService
     private static partial Regex AudioCodecRegex();
 
     // 匹配音频声道 (7.1, 5.1, 2.1, 2.0)
-    [GeneratedRegex(@"(?i)(7\.1|5\.1|2\.1|2\.0)", RegexOptions.Compiled)]
+    [GeneratedRegex(@"(?i)(?<!\d)(7\.1|5\.1|2\.1|2\.0)(?!\d)", RegexOptions.Compiled)]
     private static partial Regex AudioChannelRegex();
 
     // 匹配发布组/压制组 (通常在文件最开头的方括号里 [VCB-Studio] ...)
@@ -90,9 +90,13 @@ public partial class RegexParsingService
 
         // 2. 尝试匹配季数 (Season)
         var seasonMatch = SeasonRegex().Match(name);
-        if (seasonMatch.Success && int.TryParse(seasonMatch.Groups[1].Value, out int s))
+        if (seasonMatch.Success)
         {
-            item.Season = s;
+            string sStr = seasonMatch.Groups[1].Success ? seasonMatch.Groups[1].Value : seasonMatch.Groups[2].Value;
+            if (int.TryParse(sStr, out int s))
+            {
+                item.Season = s;
+            }
         }
 
         // 3. 尝试匹配集数 (Episode) 
@@ -100,7 +104,9 @@ public partial class RegexParsingService
         var epMatch = EpisodeRegex().Match(name);
         if (epMatch.Success)
         {
-            string epStr = string.IsNullOrEmpty(epMatch.Groups[1].Value) ? epMatch.Groups[2].Value : epMatch.Groups[1].Value;
+            string epStr = epMatch.Groups[1].Success ? epMatch.Groups[1].Value :
+                           epMatch.Groups[2].Success ? epMatch.Groups[2].Value :
+                           epMatch.Groups[3].Value;
             if (int.TryParse(epStr, out int e))
             {
                 item.Episode = e;
@@ -133,7 +139,9 @@ public partial class RegexParsingService
         var bitDepthMatch = BitDepthRegex().Match(name);
         if (bitDepthMatch.Success)
         {
-            item.BitDepth = bitDepthMatch.Groups[1].Value.ToLower(); // 统一为 10bit
+            string b = bitDepthMatch.Groups[1].Value.ToLower();
+            item.BitDepth = b == "p10" ? "10bit" :
+                            b == "p8" ? "8bit" : b;
         }
 
         // 8. 音频编码
@@ -182,7 +190,7 @@ public partial class RegexParsingService
             show = Regex.Replace(show, @"^[-_]+|[-_]+$", "").Trim();
             // 处理多个连续空格的情况
             show = Regex.Replace(show, @"\s+", " ").Trim();
-            
+
             if (!string.IsNullOrEmpty(show)) return show;
         }
         return null;
