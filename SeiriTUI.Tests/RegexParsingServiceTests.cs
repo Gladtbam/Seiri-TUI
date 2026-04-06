@@ -149,6 +149,27 @@ public class RegexParsingServiceTests
         Assert.Equal("VARYG", item.ReleaseGroup);
     }
 
+    [Fact]
+    public void Parse_ShouldExtractSpecialSeasonForOVAs()
+    {
+        var item1 = new MediaFileItem { OriginalFileName = "[LoliHouse] OAD 01.mkv", Extension = ".mkv" };
+        var item2 = new MediaFileItem { OriginalFileName = "Super Anime [OVA 3] 1080p.mp4", Extension = ".mp4" };
+        var item3 = new MediaFileItem { OriginalFileName = "Special - 02.mkv", Extension = ".mkv" };
+
+        _parser.Parse(item1);
+        _parser.Parse(item2);
+        _parser.Parse(item3);
+
+        Assert.Equal(0, item1.Season);
+        Assert.Equal(1, item1.Episode);
+
+        Assert.Equal(0, item2.Season);
+        Assert.Equal(3, item2.Episode);
+
+        Assert.Equal(0, item3.Season);
+        Assert.Equal(2, item3.Episode);
+    }
+
     [Theory]
     [InlineData("[VCB-Studio] Anime S01E01 [CHS].ass", "zh-Hans")]
     [InlineData("ShowName.S02E05.CHT.ass", "zh-Hant")]

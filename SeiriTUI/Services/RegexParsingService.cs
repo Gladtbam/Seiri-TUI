@@ -14,8 +14,8 @@ public partial class RegexParsingService
     [GeneratedRegex(@"(?i)(?:s|season)[\s\._\-]*(\d+)|第\s*(\d+)\s*季", RegexOptions.Compiled)]
     private static partial Regex SeasonRegex();
 
-    // 匹配 E01, EP01, [01], - 01 等，支持 第X集/话/話 (排除压制组等干扰)
-    [GeneratedRegex(@"(?i)(?:e|ep|episode)[\s\._\-]*(\d+)|第\s*(\d+)\s*(?:话|話|集)|(?<=\s|^|\[|-)0*(\d{1,4})(?=\s|$|\]|-)", RegexOptions.Compiled)]
+    // 匹配 E01, EP01, [01], - 01 等，支持 第X集/话/話, 也支持 OVA01 等 (排除压制组等干扰)
+    [GeneratedRegex(@"(?i)(?:e|ep|episode|ova|oad|sp|special)[\s\._\-]*(\d+)|第\s*(\d+)\s*(?:话|話|集)|(?<=\s|^|\[|-)0*(\d{1,4})(?=\s|$|\]|-)", RegexOptions.Compiled)]
     private static partial Regex EpisodeRegex();
 
     // 匹配分辨率 (1080p, 2160p, 4k, 720p, 1920x1080等)
@@ -97,6 +97,11 @@ public partial class RegexParsingService
             {
                 item.Season = s;
             }
+        }
+        else if (Regex.IsMatch(name, @"(?i)(?:\b|_|-)(ova|oad|sp|special)(?:\b|_|-|0*\d+)"))
+        {
+            // 如果未明确标明包含季数，但包含了 OVA、OAD 等特殊篇标识，默认归类为第 0 季
+            item.Season = 0;
         }
 
         // 3. 尝试匹配集数 (Episode) 
