@@ -169,6 +169,26 @@ $@"Seiri-TUI · 现代化终端刮削辅助工具
             RefreshLists();
         };
 
+        var cbSelectionMode = new CheckBox("启用部分勾选模式", ViewModel.SelectionModeEnabled) { X = 95, Y = 4 };
+
+        var btnSelectAll = new Button("全选") { X = 65, Y = 5, Visible = false };
+        var btnDeselectAll = new Button("全不选") { X = 77, Y = 5, Visible = false };
+        var btnInvertSel = new Button("反选") { X = 91, Y = 5, Visible = false };
+
+        btnSelectAll.Clicked += () => { ViewModel.SelectAll(); RefreshLists(); };
+        btnDeselectAll.Clicked += () => { ViewModel.DeselectAll(); RefreshLists(); };
+        btnInvertSel.Clicked += () => { ViewModel.InvertSelection(); RefreshLists(); };
+
+        cbSelectionMode.Toggled += (prev) =>
+        {
+            ViewModel.SelectionModeEnabled = cbSelectionMode.Checked;
+            _leftListView.AllowsMarking = cbSelectionMode.Checked;
+            btnSelectAll.Visible = cbSelectionMode.Checked;
+            btnDeselectAll.Visible = cbSelectionMode.Checked;
+            btnInvertSel.Visible = cbSelectionMode.Checked;
+            RefreshLists();
+        };
+
         // 执行操作面板
         var btnPanel = new View() { X = 1, Y = 6, Width = Dim.Fill(), Height = 1 };
         var btnMove = new Button("重命名(移动)") { X = 0, Y = 0 };
@@ -199,7 +219,7 @@ $@"Seiri-TUI · 现代化终端刮削辅助工具
         topFrame.Add(lblShowName, txtShowName, lblSeason, txtSeason, lblStartEp, txtStartEp);
         topFrame.Add(lblGlobalRes, cbGlobalRes, lblGlobalQa, cbGlobalQa, lblGlobalLang, txtGlobalLang);
         topFrame.Add(lblSourcePath, txtSourcePath, btnScan);
-        topFrame.Add(lblTargetPath, txtTargetPath, cbAutoSeason, btnPanel);
+        topFrame.Add(lblTargetPath, txtTargetPath, cbAutoSeason, cbSelectionMode, btnSelectAll, btnDeselectAll, btnInvertSel, btnPanel);
 
 
         // ======================= 中部对比列表 =======================
@@ -229,6 +249,28 @@ $@"Seiri-TUI · 现代化终端刮削辅助工具
 
         listContainer.Add(leftFrame, rightFrame);
         _leftListView.SelectedItemChanged += OnSelectedItemChanged;
+        
+        // 当多选模式下用户按空格/点击更改了选中状态，我们需要将其同步到 ViewModel (但没有官方的 MarkChanged，所以我们用鼠标事件和键盘事件捕获)
+        _leftListView.KeyPress += (e) =>
+        {
+            if (e.KeyEvent.Key == Key.Space && _leftListView.AllowsMarking && _leftListView.SelectedItem >= 0)
+            {
+                // 让它自带的处理先过，然后再把状态同步到 IsSelected
+                Application.MainLoop.Invoke(() => {
+                    ViewModel.MediaFiles[_leftListView.SelectedItem].IsSelected = _leftListView.Source.IsMarked(_leftListView.SelectedItem);
+                });
+            }
+        };
+        _leftListView.MouseClick += (e) =>
+        {
+            if (_leftListView.AllowsMarking && e.MouseEvent.Flags.HasFlag(MouseFlags.Button1Clicked))
+            {
+                Application.MainLoop.Invoke(() => {
+                    if (_leftListView.SelectedItem >= 0)
+                        ViewModel.MediaFiles[_leftListView.SelectedItem].IsSelected = _leftListView.Source.IsMarked(_leftListView.SelectedItem);
+                });
+            }
+        };
 
 
         // ======================= 底部单体参数修改区 (含 ComboBox) =======================
@@ -404,6 +446,14 @@ $@"Seiri-TUI · 现代化终端刮削辅助工具
 
         _leftListView.SetSource(leftSource);
         _rightListView.SetSource(rightSource);
+
+        if (_leftListView.AllowsMarking)
+        {
+            for (int i = 0; i < ViewModel.MediaFiles.Count; i++)
+            {
+                _leftListView.Source.SetMark(i, ViewModel.MediaFiles[i].IsSelected);
+            }
+        }
     }
 
     /// <summary>

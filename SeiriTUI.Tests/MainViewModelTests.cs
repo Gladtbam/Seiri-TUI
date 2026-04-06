@@ -86,6 +86,81 @@ public class MainViewModelTests
     }
 
     [Fact]
+    public async Task ProcessFiles_ShouldRespectSelectionMode_WhenSelectionModeIsEnabled()
+    {
+        // Arrange
+        var mockIo = new MockFileOperationService();
+        var vm = new MainViewModel(mockIo);
+        
+        var selectedItem = new MediaFileItem { OriginalFileName = "1.mkv", TargetFileName = "out1.mkv", IsSelected = true };
+        var unselectedItem = new MediaFileItem { OriginalFileName = "2.mkv", TargetFileName = "out2.mkv", IsSelected = false };
+        
+        vm.MediaFiles.Add(selectedItem);
+        vm.MediaFiles.Add(unselectedItem);
+        vm.TargetRootPath = "/fake/";
+        
+        // Act - 1. SelectionModeEnabled = false (应全部执行)
+        vm.SelectionModeEnabled = false;
+        await vm.ProcessMoveCommand.ExecuteAsync(null);
+        Assert.Equal(2, mockIo.TransferRecords.Count);
+        
+        // Act - 2. SelectionModeEnabled = true (应仅执行未处理的已选项)
+        mockIo.TransferRecords.Clear();
+        selectedItem.IsProcessed = false;
+        unselectedItem.IsProcessed = false;
+        
+        vm.SelectionModeEnabled = true;
+        await vm.ProcessMoveCommand.ExecuteAsync(null);
+        
+        // Assert: 只有 1 项应该被处理
+        Assert.Single(mockIo.TransferRecords);
+        Assert.Equal("1.mkv", mockIo.TransferRecords[0].FileItem.OriginalFileName);
+    }
+
+    [Fact]
+    public void SelectAll_ShouldMarkAllItemsAsSelected()
+    {
+        var mockIo = new MockFileOperationService();
+        var vm = new MainViewModel(mockIo);
+        vm.MediaFiles.Add(new MediaFileItem { OriginalFileName = "a.mkv", IsSelected = false });
+        vm.MediaFiles.Add(new MediaFileItem { OriginalFileName = "b.mkv", IsSelected = false });
+        vm.MediaFiles.Add(new MediaFileItem { OriginalFileName = "c.mkv", IsSelected = true });
+
+        vm.SelectAll();
+
+        Assert.All(vm.MediaFiles, item => Assert.True(item.IsSelected));
+    }
+
+    [Fact]
+    public void DeselectAll_ShouldUnmarkAllItems()
+    {
+        var mockIo = new MockFileOperationService();
+        var vm = new MainViewModel(mockIo);
+        vm.MediaFiles.Add(new MediaFileItem { OriginalFileName = "a.mkv", IsSelected = true });
+        vm.MediaFiles.Add(new MediaFileItem { OriginalFileName = "b.mkv", IsSelected = true });
+
+        vm.DeselectAll();
+
+        Assert.All(vm.MediaFiles, item => Assert.False(item.IsSelected));
+    }
+
+    [Fact]
+    public void InvertSelection_ShouldToggleEachItem()
+    {
+        var mockIo = new MockFileOperationService();
+        var vm = new MainViewModel(mockIo);
+        vm.MediaFiles.Add(new MediaFileItem { OriginalFileName = "a.mkv", IsSelected = true });
+        vm.MediaFiles.Add(new MediaFileItem { OriginalFileName = "b.mkv", IsSelected = false });
+        vm.MediaFiles.Add(new MediaFileItem { OriginalFileName = "c.mkv", IsSelected = true });
+
+        vm.InvertSelection();
+
+        Assert.False(vm.MediaFiles[0].IsSelected);
+        Assert.True(vm.MediaFiles[1].IsSelected);
+        Assert.False(vm.MediaFiles[2].IsSelected);
+    }
+
+    [Fact]
     public void RecalculateTargetFileName_ShouldAssembleCorrectly_WithFullData()
     {
         // Arrange

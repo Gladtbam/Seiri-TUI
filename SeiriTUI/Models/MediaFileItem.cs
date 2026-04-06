@@ -10,13 +10,13 @@ namespace SeiriTUI.Models;
 public partial class MediaFileItem : ObservableObject
 {
     // ====== 原始文件信息 (不可变) ======
-    
+
     /// <summary>原始文件完整路径</summary>
     public string OriginalPath { get; init; } = string.Empty;
-    
+
     /// <summary>原始文件名称包含扩展名</summary>
     public string OriginalFileName { get; init; } = string.Empty;
-    
+
     /// <summary>纯扩展名 (如 .mkv)</summary>
     public string Extension { get; init; } = string.Empty;
 
@@ -59,11 +59,14 @@ public partial class MediaFileItem : ObservableObject
     [ObservableProperty]
     private string? _bitDepth;
 
+    [ObservableProperty]
+    private bool _isSelected = false;
+
     /// <summary>压制组/发布组 (如 VCB-Studio, Beatrice-Raws)</summary>
     [ObservableProperty]
     private string? _releaseGroup;
 
-    
+
     // ====== 输出状态 ======
 
     /// <summary>目标重命名预览（由 ViewModel 根据当前属性与全局属性计算后更新）</summary>
@@ -77,7 +80,7 @@ public partial class MediaFileItem : ObservableObject
     /// <summary>标记是否发生错误（用于 UI 标红）</summary>
     [ObservableProperty]
     private bool _hasError;
-    
+
     /// <summary>标记是否成功处理</summary>
     [ObservableProperty]
     private bool _isProcessed;

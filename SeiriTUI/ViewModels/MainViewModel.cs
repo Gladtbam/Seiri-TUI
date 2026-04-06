@@ -50,6 +50,9 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private bool _autoCreateSeasonFolder = false;
 
+    [ObservableProperty]
+    private bool _selectionModeEnabled = false;
+
     // ================== 文件列表区 ==================
 
     public ObservableCollection<MediaFileItem> MediaFiles { get; }
@@ -200,6 +203,23 @@ public partial class MainViewModel : ObservableObject
     }
 
 
+    // ================== 勾选操作方法 ==================
+
+    public void SelectAll()
+    {
+        foreach (var item in MediaFiles) item.IsSelected = true;
+    }
+
+    public void DeselectAll()
+    {
+        foreach (var item in MediaFiles) item.IsSelected = false;
+    }
+
+    public void InvertSelection()
+    {
+        foreach (var item in MediaFiles) item.IsSelected = !item.IsSelected;
+    }
+
     // ================== 执行命令区 (RelayCommand) ==================
 
     [RelayCommand]
@@ -236,8 +256,9 @@ public partial class MainViewModel : ObservableObject
 
         int errorCount = 0;
 
-        // 2. 遍历执行（遇到错误不中断）
-        foreach (var item in MediaFiles)
+        // 2. 遍历执行（遇到错误不中断，跳过不合条件的项）
+        var filesToProcess = MediaFiles.Where(f => !SelectionModeEnabled || f.IsSelected);
+        foreach (var item in filesToProcess)
         {
             try
             {
