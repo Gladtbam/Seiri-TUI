@@ -15,7 +15,8 @@ public partial class RegexParsingService
     private static partial Regex SeasonRegex();
 
     // 匹配 E01, EP01, [01], - 01 等，支持 第X集/话/話, 也支持 OVA01 等 (排除压制组等干扰)
-    [GeneratedRegex(@"(?i)(?:e|ep|episode|ova|oad|sp|special)[\s\._\-]*(\d+)|第\s*(\d+)\s*(?:话|話|集)|(?<=\s|^|\[|-)0*(\d{1,4})(?=\s|$|\]|-)", RegexOptions.Compiled)]
+    // 支持版本后缀如 08v2, 13v3 等
+    [GeneratedRegex(@"(?i)(?:e|ep|episode|ova|oad|sp|special)[\s\._\-]*(\d+)|第\s*(\d+)\s*(?:话|話|集)|(?<=\s|^|\[|-)0*(\d{1,4})(?:v\d+)?(?=\s|$|\]|-)", RegexOptions.Compiled)]
     private static partial Regex EpisodeRegex();
 
     // 匹配分辨率 (1080p, 2160p, 4k, 720p, 1920x1080等)
