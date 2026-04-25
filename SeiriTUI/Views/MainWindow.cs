@@ -1,7 +1,6 @@
-using Terminal.Gui;
-using SeiriTUI.ViewModels;
 using SeiriTUI.Models;
-using System.Linq;
+using SeiriTUI.ViewModels;
+using Terminal.Gui;
 
 namespace SeiriTUI.Views;
 
@@ -163,10 +162,10 @@ $@"Seiri-TUI · 现代化终端刮削辅助工具
         var btnScan = new Button("执行扫描") { X = 65, Y = 3 };
         btnScan.Clicked += () =>
         {
-            string SourcePath = txtSourcePath.Text.ToString() ?? "";
-            ViewModel.LoadMediaFilesFromDirectory(SourcePath);
-            ViewModel.TargetRootPath = SourcePath; // 自动将目标目录设为源目录
-            txtTargetPath.Text = SourcePath;       // 同步更新 UI 输入框
+            string sourcePath = txtSourcePath.Text.ToString() ?? "";
+            ViewModel.LoadMediaFilesFromDirectory(sourcePath);
+            ViewModel.TargetRootPath = sourcePath; // 自动将目标目录设为源目录
+            txtTargetPath.Text = sourcePath;       // 同步更新 UI 输入框
             RefreshLists();
         };
 
@@ -272,14 +271,15 @@ $@"Seiri-TUI · 现代化终端刮削辅助工具
 
         listContainer.Add(_leftFrame, _rightFrame);
         _leftListView.SelectedItemChanged += OnSelectedItemChanged;
-        
+
         // 当多选模式下用户按空格/点击更改了选中状态，我们需要将其同步到 ViewModel (但没有官方的 MarkChanged，所以我们用鼠标事件和键盘事件捕获)
         _leftListView.KeyPress += (e) =>
         {
             if (e.KeyEvent.Key == Key.Space && _leftListView.AllowsMarking && _leftListView.SelectedItem >= 0)
             {
                 // 让它自带的处理先过，然后再把状态同步到 IsSelected
-                Application.MainLoop.Invoke(() => {
+                Application.MainLoop.Invoke(() =>
+                {
                     ViewModel.MediaFiles[_leftListView.SelectedItem].IsSelected = _leftListView.Source.IsMarked(_leftListView.SelectedItem);
                 });
             }
@@ -288,7 +288,8 @@ $@"Seiri-TUI · 现代化终端刮削辅助工具
         {
             if (_leftListView.AllowsMarking && e.MouseEvent.Flags.HasFlag(MouseFlags.Button1Clicked))
             {
-                Application.MainLoop.Invoke(() => {
+                Application.MainLoop.Invoke(() =>
+                {
                     if (_leftListView.SelectedItem >= 0)
                         ViewModel.MediaFiles[_leftListView.SelectedItem].IsSelected = _leftListView.Source.IsMarked(_leftListView.SelectedItem);
                 });
@@ -318,7 +319,10 @@ $@"Seiri-TUI · 现代化终端刮削辅助工具
         var lblDetRes = new Label("分辨率:") { X = Pos.Right(_detailEpisodeField) + 2, Y = 0 };
         _detailResolutionCombo = new ComboBox()
         {
-            X = Pos.Right(lblDetRes) + 1, Y = 0, Width = 10, Height = 6,
+            X = Pos.Right(lblDetRes) + 1,
+            Y = 0,
+            Width = 10,
+            Height = 6,
             ColorScheme = Colors.TopLevel
         };
         _detailResolutionCombo.SetSource(_resolutions);
@@ -331,7 +335,10 @@ $@"Seiri-TUI · 现代化终端刮削辅助工具
         var lblDetQa = new Label("质量:") { X = Pos.Right(_detailResolutionCombo) + 2, Y = 0 };
         _detailQualityCombo = new ComboBox()
         {
-            X = Pos.Right(lblDetQa) + 1, Y = 0, Width = 10, Height = 6,
+            X = Pos.Right(lblDetQa) + 1,
+            Y = 0,
+            Width = 10,
+            Height = 6,
             ColorScheme = Colors.TopLevel
         };
         _detailQualityCombo.SetSource(_qualities);
@@ -378,11 +385,11 @@ $@"Seiri-TUI · 现代化终端刮削辅助工具
         var statusMsgItem = new StatusItem(Key.Null, "Status: Ready", null);
         var statusPathItem = new StatusItem(Key.Null, "", null);
 
-        var statusBar = new StatusBar(new StatusItem[] {
+        var statusBar = new StatusBar([
             new StatusItem(Key.CtrlMask | Key.Q, "~CTRL-Q~ Quit", () => Application.RequestStop()),
             statusMsgItem,
             statusPathItem
-        });
+        ]);
 
         var errorTheme = new ColorScheme()
         {
@@ -396,7 +403,7 @@ $@"Seiri-TUI · 现代化终端刮削辅助工具
             {
                 Application.MainLoop.Invoke(() =>
                 {
-                    string msg = ViewModel.GlobalStatusMessage ?? "";
+                    string msg = ViewModel.GlobalStatusMessage;
                     statusMsgItem.Title = msg;
 
                     if (msg.Contains("错误") || msg.Contains("失败"))
@@ -479,7 +486,7 @@ $@"Seiri-TUI · 现代化终端刮削辅助工具
             _detailAudioCodecField.Text = item.AudioCodec ?? "";
             _detailAudioChannelField.Text = item.AudioChannel ?? "";
             _detailReleaseGroupField.Text = item.ReleaseGroup ?? "";
-            
+
             UpdateDetailLabels();
         }
     }
@@ -499,17 +506,17 @@ $@"Seiri-TUI · 现代化终端刮削辅助工具
 
         if (ViewModel.SubtitleMatchingMode)
         {
-            string videoName = item.AssociatedVideoItem != null ? System.IO.Path.GetFileName(item.AssociatedVideoItem.TargetFileName) : "(未匹配视频)";
+            string videoName = item.AssociatedVideoItem != null ? Path.GetFileName(item.AssociatedVideoItem.TargetFileName) : "(未匹配视频)";
             _detailMatchedVideoLabel.Text = $"匹配视频: {videoName}";
             _detailMatchedVideoLabel.Visible = true;
-            _detailTargetNameLabel.Text = $"目标字幕: {System.IO.Path.GetFileName(item.TargetFileName)}";
+            _detailTargetNameLabel.Text = $"目标字幕: {Path.GetFileName(item.TargetFileName)}";
             _detailMatchedVideoLabel.Y = 5;
             _detailTargetNameLabel.Y = 6;
         }
         else
         {
             _detailMatchedVideoLabel.Visible = false;
-            _detailTargetNameLabel.Text = $"目标名称: {System.IO.Path.GetFileName(item.TargetFileName)}";
+            _detailTargetNameLabel.Text = $"目标名称: {Path.GetFileName(item.TargetFileName)}";
             _detailTargetNameLabel.Y = 5;
         }
     }
@@ -525,9 +532,9 @@ $@"Seiri-TUI · 现代化终端刮削辅助工具
             var rightSource = displayItems.Select(x =>
             {
                 string videoLine = x.AssociatedVideoItem != null
-                    ? $"→ {System.IO.Path.GetFileName(x.AssociatedVideoItem.TargetFileName)}"
+                    ? $"→ {Path.GetFileName(x.AssociatedVideoItem.TargetFileName)}"
                     : "→ (未匹配视频)";
-                string subtitleLine = $"↓ {System.IO.Path.GetFileName(x.TargetFileName)}";
+                string subtitleLine = $"↓ {Path.GetFileName(x.TargetFileName)}";
                 return $"{videoLine}\n{subtitleLine}";
             }).ToList();
 
@@ -612,7 +619,7 @@ $@"Seiri-TUI · 现代化终端刮削辅助工具
                     if (string.IsNullOrWhiteSpace(currentText)) return;
 
                     string dir = Path.GetDirectoryName(currentText) ?? "";
-                    string prefix = Path.GetFileName(currentText) ?? "";
+                    string prefix = Path.GetFileName(currentText);
 
                     if (string.IsNullOrEmpty(dir))
                     {
@@ -640,7 +647,7 @@ $@"Seiri-TUI · 现代化终端刮削辅助工具
                         var directories = Directory.GetDirectories(dir, prefix + "*")
                             .Select(d => Path.GetFileName(d) + Path.DirectorySeparatorChar)
                             .ToList();
-                        
+
                         textField.Autocomplete.AllSuggestions = directories;
                     }
                 }

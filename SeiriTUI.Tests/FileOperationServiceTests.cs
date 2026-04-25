@@ -1,14 +1,9 @@
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Threading.Tasks;
 using FluentAssertions;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 using SeiriTUI.Models;
 using SeiriTUI.Services;
 using SeiriTUI.ViewModels;
-using Xunit;
 
 namespace SeiriTUI.Tests;
 
@@ -28,7 +23,7 @@ public class FileOperationServiceTests
     {
         // Arrange: 使用 NSubstitute 模拟 IFileOperationService
         var mockFileService = Substitute.For<IFileOperationService>();
-        
+
         var fileItem = new MediaFileItem
         {
             OriginalPath = "C:\\source\\video.mkv",

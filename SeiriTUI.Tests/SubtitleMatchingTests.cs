@@ -1,11 +1,6 @@
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 using FluentAssertions;
 using SeiriTUI.Models;
-using SeiriTUI.Services;
 using SeiriTUI.ViewModels;
-using Xunit;
 
 namespace SeiriTUI.Tests;
 

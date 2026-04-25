@@ -1,5 +1,5 @@
-using Terminal.Gui;
 using SeiriTUI.Views;
+using Terminal.Gui;
 
 namespace SeiriTUI
 {
@@ -11,10 +11,10 @@ namespace SeiriTUI
             Console.InputEncoding = System.Text.Encoding.UTF8;
 
             Application.Init();
-            
+
             var mainWindow = new MainWindow();
             Application.Run(mainWindow);
-            
+
             Application.Shutdown();
         }
     }

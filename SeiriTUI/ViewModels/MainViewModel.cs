@@ -1,8 +1,8 @@
-using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using SeiriTUI.Models;
 using SeiriTUI.Services;
+using System.Collections.ObjectModel;
 
 namespace SeiriTUI.ViewModels;
 
@@ -162,7 +162,7 @@ public partial class MainViewModel : ObservableObject
                     .Select(f => GetBaseGroupKey(f))
                     .Distinct()
                     .Count();
-                
+
                 // 第 N 个不重复的文件组，它的偏移量就应该是 (N - 1)
                 episode = StartEpisode.Value + (distinctCount - 1);
             }

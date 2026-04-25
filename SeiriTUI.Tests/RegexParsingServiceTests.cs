@@ -1,7 +1,6 @@
+using FluentAssertions;
 using SeiriTUI.Models;
 using SeiriTUI.Services;
-using FluentAssertions;
-using Xunit;
 
 namespace SeiriTUI.Tests;
 

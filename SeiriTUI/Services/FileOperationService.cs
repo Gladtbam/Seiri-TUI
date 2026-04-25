@@ -1,8 +1,5 @@
-using System;
-using System.IO;
-using System.Runtime.InteropServices;
-using System.Threading.Tasks;
 using SeiriTUI.Models;
+using System.Runtime.InteropServices;
 
 namespace SeiriTUI.Services;
 
@@ -13,7 +10,6 @@ public enum FileOpMode
     HardLink
 }
 
-/// <summary>
 /// <summary>
 /// 服务：专职进行 IO 读写、硬链接等操作；拦截诸如不同盘符和权限错误。
 /// </summary>
