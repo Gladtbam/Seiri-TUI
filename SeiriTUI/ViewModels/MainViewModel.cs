@@ -53,6 +53,12 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private bool _selectionModeEnabled = false;
 
+    /// <summary>
+    /// 工作模式切换：false = 常规媒体整理模式，true = 专属字幕匹配模式
+    /// </summary>
+    [ObservableProperty]
+    private bool _subtitleMatchingMode = false;
+
     // ================== 文件列表区 ==================
 
     public ObservableCollection<MediaFileItem> MediaFiles { get; }
@@ -74,6 +80,7 @@ public partial class MainViewModel : ObservableObject
     partial void OnGlobalResolutionChanged(string value) => RecalculateAllTargetFileNames();
     partial void OnGlobalQualityChanged(string value) => RecalculateAllTargetFileNames();
     partial void OnAutoCreateSeasonFolderChanged(bool value) => RecalculateAllTargetFileNames();
+    partial void OnSubtitleMatchingModeChanged(bool value) => RecalculateAllTargetFileNames();
 
     /// <summary>
     /// 加载并扫描指定目录下的媒体真实文件
@@ -92,11 +99,13 @@ public partial class MainViewModel : ObservableObject
 
         foreach (var file in files)
         {
+            string ext = Path.GetExtension(file).ToLowerInvariant();
             var item = new MediaFileItem
             {
                 OriginalPath = file,
                 OriginalFileName = Path.GetFileName(file),
-                Extension = Path.GetExtension(file)
+                Extension = Path.GetExtension(file),
+                FileType = CategorizeFileType(ext)
             };
 
             _parsingService.Parse(item);
@@ -108,11 +117,31 @@ public partial class MainViewModel : ObservableObject
     }
 
     /// <summary>
+    /// 根据扩展名分类文件类型
+    /// </summary>
+    public static MediaFileType CategorizeFileType(string extensionLower)
+    {
+        return extensionLower switch
+        {
+            ".ass" or ".srt" or ".sup" or ".vtt" => MediaFileType.Subtitle,
+            ".mka" or ".flac" => MediaFileType.Audio,
+            _ => MediaFileType.Video
+        };
+    }
+
+    /// <summary>
     /// 当选中的单体独立参数修改时（由 UI / View 侧监听事件推回来，或使用 PropertyChanged 订阅），
     /// 单独更新具体一项的目标文件名。
     /// </summary>
     public void RecalculateTargetFileName(MediaFileItem item)
     {
+        // 如果是字幕匹配模式，使用专属字幕命名逻辑
+        if (SubtitleMatchingMode && item.FileType == MediaFileType.Subtitle)
+        {
+            RecalculateSubtitleTargetFileName(item);
+            return;
+        }
+
         // 1. 剧集名称：全局参数优先 -> 解析参数 -> UnknownShow
         string showName = !string.IsNullOrWhiteSpace(GlobalShowName)
             ? GlobalShowName
@@ -142,7 +171,7 @@ public partial class MainViewModel : ObservableObject
         // 4. 基础命名构建：ShowName - S01E01
         string baseName = $"{showName} - S{season:D2}E{episode:D2}";
 
-        // 获取分辨率与质量，采用“独立参数(实体/提取) > 全局参数”的策略
+        // 获取分辨率与质量，采用"独立参数(实体/提取) > 全局参数"的策略
         string finalRes = !string.IsNullOrWhiteSpace(item.Resolution) ? item.Resolution : GlobalResolution;
         string finalQa = !string.IsNullOrWhiteSpace(item.Quality) ? item.Quality : GlobalQuality;
 
@@ -173,8 +202,7 @@ public partial class MainViewModel : ObservableObject
 
         // 6. 语言后缀：主要应用于外挂字幕 (音轨不需要后缀，即 .mka、.flac 不需要添加 .zh-Hans 后缀)
         string langSuffix = "";
-        string extLow = item.Extension.ToLowerInvariant();
-        bool isSubtitle = extLow is ".ass" or ".srt" or ".sup" or ".vtt";
+        bool isSubtitle = item.FileType == MediaFileType.Subtitle;
 
         string lang = !string.IsNullOrWhiteSpace(item.Language) ? item.Language : DefaultSubtitleLanguage;
         if (isSubtitle && !string.IsNullOrWhiteSpace(lang))
@@ -194,11 +222,104 @@ public partial class MainViewModel : ObservableObject
             : Path.Combine(seasonFolder, fileName);
     }
 
+    /// <summary>
+    /// 字幕匹配模式下的专属命名计算：
+    /// 格式公式：[匹配的目标视频基础名].[字幕组名].[字幕语言].字幕后缀
+    /// </summary>
+    private void RecalculateSubtitleTargetFileName(MediaFileItem subtitleItem)
+    {
+        // 1. 先执行字幕-视频绑定（通过相同的 S/E）
+        MatchSubtitleToVideo(subtitleItem);
+
+        // 2. 获取视频基础名称
+        string videoBaseName;
+        if (subtitleItem.AssociatedVideoItem != null)
+        {
+            // 先确保关联视频的目标名称是最新的
+            var video = subtitleItem.AssociatedVideoItem;
+            string videoTargetName = video.TargetFileName;
+            if (string.IsNullOrWhiteSpace(videoTargetName))
+            {
+                // 如果视频的目标文件名还没算过，先算一下
+                RecalculateTargetFileName(video);
+                videoTargetName = video.TargetFileName;
+            }
+
+            // 去除路径前缀 (如 Season 01\xxx.mkv -> xxx.mkv)
+            string videoFileName = Path.GetFileName(videoTargetName);
+            videoBaseName = Path.GetFileNameWithoutExtension(videoFileName);
+        }
+        else
+        {
+            // 未找到匹配的视频，回退为常规命名
+            int season = subtitleItem.Season ?? GlobalSeason;
+            int episode = subtitleItem.Episode ?? 1;
+            string showName = !string.IsNullOrWhiteSpace(GlobalShowName)
+                ? GlobalShowName
+                : (!string.IsNullOrWhiteSpace(subtitleItem.ParsedShowName) ? subtitleItem.ParsedShowName : "UnknownShow");
+            videoBaseName = $"{showName} - S{season:D2}E{episode:D2}";
+        }
+
+        // 3. 构建字幕后缀：.[Group].[Lang].ext (缺失智能消除点号)
+        var suffixParts = new List<string>();
+        if (!string.IsNullOrWhiteSpace(subtitleItem.ReleaseGroup))
+            suffixParts.Add(subtitleItem.ReleaseGroup);
+
+        string lang = !string.IsNullOrWhiteSpace(subtitleItem.Language)
+            ? subtitleItem.Language
+            : DefaultSubtitleLanguage;
+        if (!string.IsNullOrWhiteSpace(lang))
+            suffixParts.Add(lang);
+
+        string suffix = suffixParts.Count > 0 ? "." + string.Join(".", suffixParts) : "";
+
+        string fileName = $"{videoBaseName}{suffix}{subtitleItem.Extension}";
+
+        // 4. 处理父目录
+        int finalSeason = subtitleItem.Season ?? GlobalSeason;
+        string seasonFolder = AutoCreateSeasonFolder ? $"Season {finalSeason:D2}" : "";
+
+        subtitleItem.TargetFileName = string.IsNullOrEmpty(seasonFolder)
+            ? fileName
+            : Path.Combine(seasonFolder, fileName);
+    }
+
+    /// <summary>
+    /// 字幕-视频绑定：通过相同的 Season/Episode 匹配
+    /// </summary>
+    private void MatchSubtitleToVideo(MediaFileItem subtitleItem)
+    {
+        int subSeason = subtitleItem.Season ?? GlobalSeason;
+        int subEpisode = subtitleItem.Episode ?? 1;
+
+        var matchedVideo = MediaFiles.FirstOrDefault(f =>
+            f.FileType == MediaFileType.Video &&
+            (f.Season ?? GlobalSeason) == subSeason &&
+            (f.Episode ?? 1) == subEpisode);
+
+        subtitleItem.AssociatedVideoItem = matchedVideo;
+    }
+
     private void RecalculateAllTargetFileNames()
     {
-        foreach (var item in MediaFiles)
+        if (SubtitleMatchingMode)
         {
-            RecalculateTargetFileName(item);
+            // 字幕匹配模式：先计算所有视频文件的目标名，再计算字幕文件
+            foreach (var item in MediaFiles.Where(f => f.FileType == MediaFileType.Video))
+            {
+                RecalculateTargetFileName(item);
+            }
+            foreach (var item in MediaFiles.Where(f => f.FileType != MediaFileType.Video))
+            {
+                RecalculateTargetFileName(item);
+            }
+        }
+        else
+        {
+            foreach (var item in MediaFiles)
+            {
+                RecalculateTargetFileName(item);
+            }
         }
     }
 
@@ -222,19 +343,24 @@ public partial class MainViewModel : ObservableObject
 
     // ================== 执行命令区 (RelayCommand) ==================
 
-    [RelayCommand]
+    /// <summary>
+    /// 检查命令是否可以执行：GlobalSeason 必须 >= 0（必填项校验）
+    /// </summary>
+    private bool CanExecuteProcess() => GlobalSeason >= 0;
+
+    [RelayCommand(CanExecute = nameof(CanExecuteProcess))]
     private async Task ProcessMoveAsync()
     {
         await ProcessFilesAsync(FileOpMode.Move);
     }
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(CanExecuteProcess))]
     private async Task ProcessCopyAsync()
     {
         await ProcessFilesAsync(FileOpMode.Copy);
     }
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(CanExecuteProcess))]
     private async Task ProcessHardLinkAsync()
     {
         await ProcessFilesAsync(FileOpMode.HardLink);

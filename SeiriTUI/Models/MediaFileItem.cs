@@ -1,7 +1,18 @@
 using System.IO;
+using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace SeiriTUI.Models;
+
+/// <summary>
+/// 文件类型枚举：区分视频、字幕和外挂音轨
+/// </summary>
+public enum MediaFileType
+{
+    Video,
+    Subtitle,
+    Audio
+}
 
 /// <summary>
 /// 表示核心业务实体：媒体文件项。
@@ -19,6 +30,13 @@ public partial class MediaFileItem : ObservableObject
 
     /// <summary>纯扩展名 (如 .mkv)</summary>
     public string Extension { get; init; } = string.Empty;
+
+    /// <summary>文件类型 (视频/字幕/音轨)</summary>
+    public MediaFileType FileType { get; init; } = MediaFileType.Video;
+
+    /// <summary>字幕匹配模式下：关联的视频文件项 (通过相同 S/E 匹配)</summary>
+    [ObservableProperty]
+    private MediaFileItem? _associatedVideoItem;
 
 
     // ====== 解析/覆盖 参数 (可被 ViewModel 更新或用户 UI 独立修改) ======
