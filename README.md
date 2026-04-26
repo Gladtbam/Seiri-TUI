@@ -9,6 +9,9 @@
 <p align="center">
   <img src="screenshots/screenshot.png" alt="Seiri-TUI Interface Preview" width="800">
 </p>
+<p align="center">
+  <img src="screenshots/screenshot-subtitle.png" alt="Seiri-TUI Subtitle Interface Preview" width="800">
+</p>
 
 ## ✨ 核心特性
 
@@ -37,17 +40,7 @@ cd Seiri-TUI
 dotnet run --project SeiriTUI/SeiriTUI.csproj
 ```
 
-# 3. AOT 独立发布 (推荐给 NAS 用户)
-
-为了在无 .NET 环境的服务器或 NAS（如 Debian/Ubuntu）上运行，推荐发布为 Self-Contained 的 AOT 二进制文件：
-
-```bash
-dotnet publish SeiriTUI/SeiriTUI.csproj -c Release -r linux-x64 --self-contained true
-```
-
-编译产物将位于 `SeiriTUI/bin/Release/net8.0/linux-x64/publish/`，直接将 `SeiriTUI` 可执行文件丢入 NAS 即可运行。
-
-# 4. GitHub Actions 自动构建
+# 3. GitHub Actions 自动构建
 
 GitHub Actions 将自动构建并发布 deb 包。在 Release 页面下载即可。Linux 终端执行 `seiri-tui` 即可运行。
 
