@@ -173,6 +173,52 @@ public class MainViewModelTests
         vm.MediaFiles[2].IsSelected.Should().BeFalse();
     }
 
+    [Fact]
+    public async Task SubtitleMatchingMode_ShouldOnlyProcessSubtitles_NotVideoFiles()
+    {
+        // Arrange
+        var mockIo = new MockFileOperationService();
+        var vm = new MainViewModel(mockIo);
+
+        var videoItem = new MediaFileItem
+        {
+            OriginalFileName = "Show.S01E01.1080p.mkv",
+            Extension = ".mkv",
+            FileType = MediaFileType.Video,
+            Season = 1,
+            Episode = 1
+        };
+        var subtitleItem = new MediaFileItem
+        {
+            OriginalFileName = "[SubGroup] Show 01.ass",
+            Extension = ".ass",
+            FileType = MediaFileType.Subtitle,
+            Season = 1,
+            Episode = 1,
+            ReleaseGroup = "SubGroup",
+            Language = "zh-Hans"
+        };
+
+        vm.MediaFiles.Add(videoItem);
+        vm.MediaFiles.Add(subtitleItem);
+        vm.TargetRootPath = "/fake/target";
+
+        // Act - 字幕匹配模式
+        vm.SubtitleMatchingMode = true;
+        await vm.ProcessMoveCommand.ExecuteAsync(null);
+
+        // Assert: 视频文件保持原始名称，不被修改
+        videoItem.TargetFileName.Should().Be("Show.S01E01.1080p.mkv");
+        videoItem.IsProcessed.Should().BeFalse();
+
+        // Assert: 只有字幕文件被处理，且基于视频原始名构建
+        mockIo.TransferRecords.Should().HaveCount(1);
+        mockIo.TransferRecords[0].FileItem.Should().BeSameAs(subtitleItem);
+        subtitleItem.IsProcessed.Should().BeTrue();
+        // 字幕目标名应基于视频原名：Show.S01E01.1080p.SubGroup.zh-Hans.ass
+        subtitleItem.TargetFileName.Should().Be("Show.S01E01.1080p.SubGroup.zh-Hans.ass");
+    }
+
     // ==================== 优先级与覆盖机制测试 ====================
 
     /// <summary>

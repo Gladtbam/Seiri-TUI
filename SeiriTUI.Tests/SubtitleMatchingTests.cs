@@ -137,12 +137,12 @@ public class SubtitleMatchingTests
         vm.RecalculateTargetFileName(video);
         vm.RecalculateTargetFileName(subWithGroup);
 
-        // Assert: 格式应为 [VideoBaseName].[Group].[Lang].ext
-        // 视频基础名：ShowName - S01E01 - [BD-1080p]
+        // Assert: 格式应为 [VideoOriginalBaseName].[Group].[Lang].ext
+        // 视频原始名：video_ep01.mkv -> 基础名为 video_ep01
         subWithGroup.TargetFileName.Should().EndWith(".SubsPlease.zh-CN.ass",
             "字幕名应包含 [Group].[Lang].ext 后缀");
-        subWithGroup.TargetFileName.Should().Contain("ShowName - S01E01",
-            "字幕名应基于匹配的视频名");
+        subWithGroup.TargetFileName.Should().Contain("video_ep01",
+            "字幕名应基于匹配的视频原始名");
     }
 
     /// <summary>
@@ -286,8 +286,8 @@ public class SubtitleMatchingTests
         subBare.TargetFileName.Should().NotContain("..",
             "无 Group 无 Language 时不应产生连续点号");
         subBare.TargetFileName.Should().EndWith(".ass");
-        // 应直接以视频基础名 + .ass 结尾
-        subBare.TargetFileName.Should().Contain("ShowName - S01E01");
+        // 应直接以视频原始基础名 + .ass 结尾
+        subBare.TargetFileName.Should().Contain("video");
     }
 
     /// <summary>

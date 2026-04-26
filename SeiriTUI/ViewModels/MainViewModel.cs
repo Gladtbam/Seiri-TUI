@@ -231,23 +231,13 @@ public partial class MainViewModel : ObservableObject
         // 1. 先执行字幕-视频绑定（通过相同的 S/E）
         MatchSubtitleToVideo(subtitleItem);
 
-        // 2. 获取视频基础名称
+        // 2. 获取视频基础名称（字幕匹配模式下使用视频的原始文件名，不做任何重命名）
         string videoBaseName;
         if (subtitleItem.AssociatedVideoItem != null)
         {
-            // 先确保关联视频的目标名称是最新的
             var video = subtitleItem.AssociatedVideoItem;
-            string videoTargetName = video.TargetFileName;
-            if (string.IsNullOrWhiteSpace(videoTargetName))
-            {
-                // 如果视频的目标文件名还没算过，先算一下
-                RecalculateTargetFileName(video);
-                videoTargetName = video.TargetFileName;
-            }
-
-            // 去除路径前缀 (如 Season 01\xxx.mkv -> xxx.mkv)
-            string videoFileName = Path.GetFileName(videoTargetName);
-            videoBaseName = Path.GetFileNameWithoutExtension(videoFileName);
+            // 直接使用视频的原始文件名作为基础名，视频本身不被重命名
+            videoBaseName = Path.GetFileNameWithoutExtension(video.OriginalFileName);
         }
         else
         {
@@ -304,10 +294,10 @@ public partial class MainViewModel : ObservableObject
     {
         if (SubtitleMatchingMode)
         {
-            // 字幕匹配模式：先计算所有视频文件的目标名，再计算字幕文件
+            // 字幕匹配模式：视频文件保持原始名称不变，仅处理字幕文件的目标名
             foreach (var item in MediaFiles.Where(f => f.FileType == MediaFileType.Video))
             {
-                RecalculateTargetFileName(item);
+                item.TargetFileName = item.OriginalFileName;
             }
             foreach (var item in MediaFiles.Where(f => f.FileType != MediaFileType.Video))
             {
@@ -383,7 +373,10 @@ public partial class MainViewModel : ObservableObject
         int errorCount = 0;
 
         // 2. 遍历执行（遇到错误不中断，跳过不合条件的项）
-        var filesToProcess = MediaFiles.Where(f => !SelectionModeEnabled || f.IsSelected);
+        // 字幕匹配模式下仅处理字幕文件，视频文件不参与任何物理操作
+        var filesToProcess = MediaFiles
+            .Where(f => !SelectionModeEnabled || f.IsSelected)
+            .Where(f => !SubtitleMatchingMode || f.FileType != MediaFileType.Video);
         foreach (var item in filesToProcess)
         {
             try
