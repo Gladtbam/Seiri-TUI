@@ -74,6 +74,12 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private bool _subtitleMatchingMode = false;
 
+    /// <summary>
+    /// 工作模式切换：true = 电影整理模式（无需季和集）
+    /// </summary>
+    [ObservableProperty]
+    private bool _movieMode = false;
+
     // ================== 文件列表区 ==================
 
     public ObservableCollection<MediaFileItem> MediaFiles { get; }
@@ -101,6 +107,7 @@ public partial class MainViewModel : ObservableObject
     partial void OnGlobalReleaseGroupChanged(string value) => RecalculateAllTargetFileNames();
     partial void OnAutoCreateSeasonFolderChanged(bool value) => RecalculateAllTargetFileNames();
     partial void OnSubtitleMatchingModeChanged(bool value) => RecalculateAllTargetFileNames();
+    partial void OnMovieModeChanged(bool value) => RecalculateAllTargetFileNames();
 
     /// <summary>
     /// 加载并扫描指定目录下的媒体真实文件
@@ -202,8 +209,16 @@ public partial class MainViewModel : ObservableObject
             }
         }
 
-        // 4. 基础命名构建：ShowName - S01E01
-        string baseName = $"{showName} - S{season:D2}E{episode:D2}";
+        // 4. 基础命名构建：ShowName - S01E01 或 ShowName
+        string baseName;
+        if (MovieMode)
+        {
+            baseName = showName;
+        }
+        else
+        {
+            baseName = $"{showName} - S{season:D2}E{episode:D2}";
+        }
 
         // 获取分辨率与质量，采用"独立参数(实体/提取) > 全局参数"的策略
         string finalRes = !string.IsNullOrWhiteSpace(item.Resolution) ? item.Resolution : GlobalResolution;
@@ -253,7 +268,7 @@ public partial class MainViewModel : ObservableObject
         string fileName = $"{baseName}{tagString}{langSuffix}{item.Extension}";
 
         // 7. 处理父目录 (如果开启了自动创建季文件夹)
-        string seasonFolder = AutoCreateSeasonFolder ? $"Season {season:D2}" : "";
+        string seasonFolder = (!MovieMode && AutoCreateSeasonFolder) ? $"Season {season:D2}" : "";
 
         // 赋值给绑定的预览字段 (这里提供相对路径的预览)
         item.TargetFileName = string.IsNullOrEmpty(seasonFolder)

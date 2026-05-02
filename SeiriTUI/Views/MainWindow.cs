@@ -265,14 +265,16 @@ $@"Seiri-TUI · 现代化终端刮削辅助工具
 
         var cbSelectionMode = new CheckBox("启用部分勾选模式", ViewModel.SelectionModeEnabled) { X = 95, Y = 5 };
 
-        // 工作模式切换复选框
-        var cbSubtitleMode = new CheckBox("字幕匹配模式", ViewModel.SubtitleMatchingMode) { X = 95, Y = 4 };
-        cbSubtitleMode.Toggled += (prev) =>
+        // 工作模式切换
+        var lblWorkMode = new Label("工作模式:") { X = 95, Y = 4 };
+        var btnWorkMode = CreateCycleButton(new List<string> { "常规", "电影", "字幕" }, "常规", val =>
         {
-            ViewModel.SubtitleMatchingMode = cbSubtitleMode.Checked;
+            ViewModel.MovieMode = val == "电影";
+            ViewModel.SubtitleMatchingMode = val == "字幕";
             UpdateFrameTitles();
             RefreshLists();
-        };
+        });
+        btnWorkMode.X = Pos.Right(lblWorkMode) + 1; btnWorkMode.Y = 4;
 
         var btnSelectAll = new Button("全选") { X = 65, Y = 6, Visible = false };
         var btnDeselectAll = new Button("全不选") { X = 77, Y = 6, Visible = false };
@@ -323,7 +325,7 @@ $@"Seiri-TUI · 现代化终端刮削辅助工具
         topFrame.Add(lblGlobalRes, btnGlobalRes, lblGlobalQa, btnGlobalQa, lblGlobalLang, txtGlobalLang);
         topFrame.Add(lblGlobalVC, btnGlobalVC, lblGlobalBD, btnGlobalBD, lblGlobalAC, btnGlobalAC, lblGlobalACh, btnGlobalACh, lblGlobalRG, txtGlobalRG);
         topFrame.Add(lblSourcePath, txtSourcePath, btnScan);
-        topFrame.Add(lblTargetPath, txtTargetPath, cbAutoSeason, cbSelectionMode, cbSubtitleMode, btnSelectAll, btnDeselectAll, btnInvertSel, btnPanel);
+        topFrame.Add(lblTargetPath, txtTargetPath, cbAutoSeason, cbSelectionMode, lblWorkMode, btnWorkMode, btnSelectAll, btnDeselectAll, btnInvertSel, btnPanel);
 
 
         // ======================= 中部对比列表 =======================
