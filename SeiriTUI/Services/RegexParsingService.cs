@@ -30,8 +30,8 @@ public partial class RegexParsingService
     [GeneratedRegex(@"(?i)(x264|x265|h\.?264|h\.?265|hevc|avc)", RegexOptions.Compiled)]
     private static partial Regex VideoCodecRegex();
 
-    // 匹配色彩深度 (8bit, 10bit, 12bit, p8, p10)
-    [GeneratedRegex(@"(?i)(8bit|10bit|12bit|p8|p10)", RegexOptions.Compiled)]
+    // 匹配色彩深度 (8bit, 10bit, 12bit, p8, p10, ma10p, hi10p, main10, high10)
+    [GeneratedRegex(@"(?i)(8bit|10bit|12bit|p8|p10|ma10p|hi10p|main10|high10)", RegexOptions.Compiled)]
     private static partial Regex BitDepthRegex();
 
     // 匹配音频编码 (FLAC, AAC, AC3, DTS, TrueHD, OPUS, MP3, EAC3)
@@ -145,8 +145,25 @@ public partial class RegexParsingService
         if (bitDepthMatch.Success)
         {
             string b = bitDepthMatch.Groups[1].Value.ToLower();
-            item.BitDepth = b == "p10" ? "10bit" :
-                            b == "p8" ? "8bit" : b;
+            if (b == "p10" || b == "ma10p" || b == "hi10p" || b == "main10" || b == "high10")
+            {
+                item.BitDepth = "10bit";
+                
+                // 辅助推断视频编码
+                if (string.IsNullOrEmpty(item.VideoCodec))
+                {
+                    if (b == "hi10p" || b == "high10") item.VideoCodec = "x264";
+                    else if (b == "ma10p" || b == "main10") item.VideoCodec = "x265";
+                }
+            }
+            else if (b == "p8")
+            {
+                item.BitDepth = "8bit";
+            }
+            else
+            {
+                item.BitDepth = b;
+            }
         }
 
         // 8. 音频编码

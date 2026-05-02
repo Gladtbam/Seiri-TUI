@@ -261,4 +261,18 @@ public class RegexParsingServiceTests
         item.AudioCodec.Should().Be("FLAC", "音频编码 (AudioCodec) 提取失败");
         item.AudioChannel.Should().Be("5.1", "音频声道 (AudioChannel) 提取失败");
     }
+
+    [Theory]
+    [InlineData("Show - 01 [1080p Ma10p].mkv", "10bit", "x265")]
+    [InlineData("Show - 02 [720p Hi10p].mkv", "10bit", "x264")]
+    [InlineData("Show - 03 [1080p Main10].mkv", "10bit", "x265")]
+    [InlineData("Show - 04 [1080p High10].mkv", "10bit", "x264")]
+    [InlineData("Show - 05 [1080p AVC Ma10p].mkv", "10bit", "x264")] // AVC overrides deduced x265
+    public void Parse_ShouldExtractBitDepthAndDeduceCodec_FromMa10pHi10p(string fileName, string expectedBitDepth, string expectedCodec)
+    {
+        var item = new MediaFileItem { OriginalFileName = fileName };
+        _parser.Parse(item);
+        item.BitDepth.Should().Be(expectedBitDepth);
+        item.VideoCodec.Should().Be(expectedCodec);
+    }
 }
