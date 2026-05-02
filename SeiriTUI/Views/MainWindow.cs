@@ -145,6 +145,8 @@ $@"Seiri-TUI · 现代化终端刮削辅助工具
 
     private void BuildUi()
     {
+        Action? updateVisibility = null;
+
         // ======================= 顶部全局控制区 =======================
         var topFrame = new FrameView("Global Console")
         {
@@ -273,6 +275,7 @@ $@"Seiri-TUI · 现代化终端刮削辅助工具
             ViewModel.SubtitleMatchingMode = val == "字幕";
             UpdateFrameTitles();
             RefreshLists();
+            updateVisibility?.Invoke();
         });
         btnWorkMode.X = Pos.Right(lblWorkMode) + 1; btnWorkMode.Y = 4;
 
@@ -478,7 +481,7 @@ $@"Seiri-TUI · 现代化终端刮削辅助工具
                     string msg = ViewModel.GlobalStatusMessage;
                     statusMsgItem.Title = msg;
 
-                    if (msg.Contains("错误") || msg.Contains("失败"))
+                    if (msg.Contains("Error", StringComparison.OrdinalIgnoreCase) || msg.Contains("失败") || msg.Contains("异常"))
                         statusBar.ColorScheme = errorTheme;
                     else
                         statusBar.ColorScheme = ColorScheme; // 恢复默认暗黑配色
@@ -508,6 +511,51 @@ $@"Seiri-TUI · 现代化终端刮削辅助工具
                 });
             }
         };
+        updateVisibility = () =>
+        {
+            bool isMovie = ViewModel.MovieMode;
+            bool isSub = ViewModel.SubtitleMatchingMode;
+
+            bool showSE = !isMovie;
+            lblSeason.Visible = showSE;
+            txtSeason.Visible = showSE;
+            lblStartEp.Visible = showSE;
+            txtStartEp.Visible = showSE;
+            lblDetSeason.Visible = showSE;
+            _detailSeasonField.Visible = showSE;
+            lblDetEp.Visible = showSE;
+            _detailEpisodeField.Visible = showSE;
+
+            cbAutoSeason.Visible = (!isMovie && !isSub);
+
+            bool showTech = !isSub;
+            lblGlobalRes.Visible = showTech;
+            btnGlobalRes.Visible = showTech;
+            lblGlobalQa.Visible = showTech;
+            btnGlobalQa.Visible = showTech;
+            lblGlobalVC.Visible = showTech;
+            btnGlobalVC.Visible = showTech;
+            lblGlobalBD.Visible = showTech;
+            btnGlobalBD.Visible = showTech;
+            lblGlobalAC.Visible = showTech;
+            btnGlobalAC.Visible = showTech;
+            lblGlobalACh.Visible = showTech;
+            btnGlobalACh.Visible = showTech;
+
+            lblDetRes.Visible = showTech;
+            _detailResolutionBtn.Visible = showTech;
+            lblDetQa.Visible = showTech;
+            _detailQualityBtn.Visible = showTech;
+            lblDetVC.Visible = showTech;
+            _detailVideoCodecBtn.Visible = showTech;
+            lblDetBD.Visible = showTech;
+            _detailBitDepthBtn.Visible = showTech;
+            lblDetAC.Visible = showTech;
+            _detailAudioCodecBtn.Visible = showTech;
+            lblDetACh.Visible = showTech;
+            _detailAudioChannelBtn.Visible = showTech;
+        };
+        updateVisibility.Invoke();
 
         Add(topFrame, listContainer, detailFrame, statusBar);
     }
