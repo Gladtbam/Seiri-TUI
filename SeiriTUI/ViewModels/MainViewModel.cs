@@ -48,6 +48,21 @@ public partial class MainViewModel : ObservableObject
     private string _globalQuality = string.Empty;
 
     [ObservableProperty]
+    private string _globalVideoCodec = string.Empty;
+
+    [ObservableProperty]
+    private string _globalBitDepth = string.Empty;
+
+    [ObservableProperty]
+    private string _globalAudioCodec = string.Empty;
+
+    [ObservableProperty]
+    private string _globalAudioChannel = string.Empty;
+
+    [ObservableProperty]
+    private string _globalReleaseGroup = string.Empty;
+
+    [ObservableProperty]
     private bool _autoCreateSeasonFolder = false;
 
     [ObservableProperty]
@@ -79,6 +94,11 @@ public partial class MainViewModel : ObservableObject
     partial void OnGlobalShowNameChanged(string value) => RecalculateAllTargetFileNames();
     partial void OnGlobalResolutionChanged(string value) => RecalculateAllTargetFileNames();
     partial void OnGlobalQualityChanged(string value) => RecalculateAllTargetFileNames();
+    partial void OnGlobalVideoCodecChanged(string value) => RecalculateAllTargetFileNames();
+    partial void OnGlobalBitDepthChanged(string value) => RecalculateAllTargetFileNames();
+    partial void OnGlobalAudioCodecChanged(string value) => RecalculateAllTargetFileNames();
+    partial void OnGlobalAudioChannelChanged(string value) => RecalculateAllTargetFileNames();
+    partial void OnGlobalReleaseGroupChanged(string value) => RecalculateAllTargetFileNames();
     partial void OnAutoCreateSeasonFolderChanged(bool value) => RecalculateAllTargetFileNames();
     partial void OnSubtitleMatchingModeChanged(bool value) => RecalculateAllTargetFileNames();
 
@@ -130,6 +150,20 @@ public partial class MainViewModel : ObservableObject
     }
 
     /// <summary>
+    /// 获取常见音频编码对应的默认声道
+    /// </summary>
+    public static string? GetDefaultChannelForCodec(string codec)
+    {
+        return codec switch
+        {
+            "AAC" or "FLAC" or "OPUS" or "MP3" => "2.0",
+            "AC-3" or "E-AC-3" or "DTS" => "5.1",
+            "TrueHD" => "7.1",
+            _ => null
+        };
+    }
+
+    /// <summary>
     /// 当选中的单体独立参数修改时（由 UI / View 侧监听事件推回来，或使用 PropertyChanged 订阅），
     /// 单独更新具体一项的目标文件名。
     /// </summary>
@@ -174,6 +208,11 @@ public partial class MainViewModel : ObservableObject
         // 获取分辨率与质量，采用"独立参数(实体/提取) > 全局参数"的策略
         string finalRes = !string.IsNullOrWhiteSpace(item.Resolution) ? item.Resolution : GlobalResolution;
         string finalQa = !string.IsNullOrWhiteSpace(item.Quality) ? item.Quality : GlobalQuality;
+        string finalVC = !string.IsNullOrWhiteSpace(item.VideoCodec) ? item.VideoCodec : GlobalVideoCodec;
+        string finalBD = !string.IsNullOrWhiteSpace(item.BitDepth) ? item.BitDepth : GlobalBitDepth;
+        string finalAC = !string.IsNullOrWhiteSpace(item.AudioCodec) ? item.AudioCodec : GlobalAudioCodec;
+        string finalACh = !string.IsNullOrWhiteSpace(item.AudioChannel) ? item.AudioChannel : GlobalAudioChannel;
+        string finalRG = !string.IsNullOrWhiteSpace(item.ReleaseGroup) ? item.ReleaseGroup : GlobalReleaseGroup;
 
         // 5. 组凑可选标签：如 [WEBDL-1080p][FLAC][x265 10bit]-ReleaseGroup
         string qr = "";
@@ -184,18 +223,18 @@ public partial class MainViewModel : ObservableObject
 
         string ac = "";
         var acList = new List<string>();
-        if (!string.IsNullOrWhiteSpace(item.AudioCodec)) acList.Add(item.AudioCodec);
-        if (!string.IsNullOrWhiteSpace(item.AudioChannel)) acList.Add(item.AudioChannel);
+        if (!string.IsNullOrWhiteSpace(finalAC)) acList.Add(finalAC);
+        if (!string.IsNullOrWhiteSpace(finalACh)) acList.Add(finalACh);
         if (acList.Count > 0) ac = $"[{string.Join(" ", acList)}]";
 
         string cb = "";
         var cbList = new List<string>();
-        if (!string.IsNullOrWhiteSpace(item.VideoCodec)) cbList.Add(item.VideoCodec);
-        if (!string.IsNullOrWhiteSpace(item.BitDepth)) cbList.Add(item.BitDepth);
+        if (!string.IsNullOrWhiteSpace(finalVC)) cbList.Add(finalVC);
+        if (!string.IsNullOrWhiteSpace(finalBD)) cbList.Add(finalBD);
         if (cbList.Count > 0) cb = $"[{string.Join(" ", cbList)}]";
 
         string rg = "";
-        if (!string.IsNullOrWhiteSpace(item.ReleaseGroup)) rg = $"-{item.ReleaseGroup}";
+        if (!string.IsNullOrWhiteSpace(finalRG)) rg = $"-{finalRG}";
 
         string tagString = $"{qr}{ac}{cb}{rg}";
         if (!string.IsNullOrEmpty(tagString)) tagString = $" - {tagString}";
@@ -252,8 +291,9 @@ public partial class MainViewModel : ObservableObject
 
         // 3. 构建字幕后缀：.[Group].[Lang].ext (缺失智能消除点号)
         var suffixParts = new List<string>();
-        if (!string.IsNullOrWhiteSpace(subtitleItem.ReleaseGroup))
-            suffixParts.Add(subtitleItem.ReleaseGroup);
+        string finalRG = !string.IsNullOrWhiteSpace(subtitleItem.ReleaseGroup) ? subtitleItem.ReleaseGroup : GlobalReleaseGroup;
+        if (!string.IsNullOrWhiteSpace(finalRG))
+            suffixParts.Add(finalRG);
 
         string lang = !string.IsNullOrWhiteSpace(subtitleItem.Language)
             ? subtitleItem.Language

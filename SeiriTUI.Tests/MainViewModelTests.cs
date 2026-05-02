@@ -425,4 +425,39 @@ public class MainViewModelTests
         item.TargetFileName.Should().StartWith("Season 02");
         item.TargetFileName.Should().Contain("Show - S02E01");
     }
+
+    [Fact]
+    public void RecalculateTargetFileName_ShouldUseGlobalProperties_WhenItemPropertiesAreMissing()
+    {
+        var vm = new MainViewModel(new MockFileOperationService());
+        vm.GlobalVideoCodec = "x265";
+        vm.GlobalBitDepth = "10bit";
+        vm.GlobalAudioCodec = "FLAC";
+        vm.GlobalAudioChannel = "5.1";
+        vm.GlobalReleaseGroup = "GlobalGroup";
+
+        var item = new MediaFileItem { ParsedShowName = "Show", Season = 1, Episode = 1, Extension = ".mkv" };
+        vm.RecalculateTargetFileName(item);
+
+        item.TargetFileName.Should().Be("Show - S01E01 - [FLAC 5.1][x265 10bit]-GlobalGroup.mkv");
+
+        // Overriding with independent properties should take precedence
+        item.VideoCodec = "x264";
+        item.ReleaseGroup = "LocalGroup";
+        vm.RecalculateTargetFileName(item);
+
+        item.TargetFileName.Should().Be("Show - S01E01 - [FLAC 5.1][x264 10bit]-LocalGroup.mkv");
+    }
+
+    [Theory]
+    [InlineData("AAC", "2.0")]
+    [InlineData("FLAC", "2.0")]
+    [InlineData("AC-3", "5.1")]
+    [InlineData("TrueHD", "7.1")]
+    [InlineData("UnknownCodec", null)]
+    public void GetDefaultChannelForCodec_ShouldReturnCorrectChannel(string codec, string expectedChannel)
+    {
+        var result = MainViewModel.GetDefaultChannelForCodec(codec);
+        result.Should().Be(expectedChannel);
+    }
 }

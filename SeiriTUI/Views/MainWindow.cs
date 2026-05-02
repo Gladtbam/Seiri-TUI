@@ -15,14 +15,14 @@ public class MainWindow : Window
     private TextField _detailSeasonField;
     private TextField _detailEpisodeField;
     private TextField _detailLanguageField;
-    private ComboBox _detailResolutionCombo;
-    private ComboBox _detailQualityCombo;
+    private Button _detailResolutionBtn;
+    private Button _detailQualityBtn;
 
     // Detail fields - optional (可选项参数区)
-    private TextField _detailVideoCodecField;
-    private TextField _detailBitDepthField;
-    private TextField _detailAudioCodecField;
-    private TextField _detailAudioChannelField;
+    private Button _detailVideoCodecBtn;
+    private Button _detailBitDepthBtn;
+    private Button _detailAudioCodecBtn;
+    private Button _detailAudioChannelBtn;
     private TextField _detailReleaseGroupField;
 
     // Detail fields - Readonly labels for name preview
@@ -36,6 +36,10 @@ public class MainWindow : Window
 
     private readonly List<string> _resolutions = new() { "(无)", "2160p", "1080p", "720p", "480p" };
     private readonly List<string> _qualities = new() { "(无)", "WEBDL", "WEBRip", "BD", "BDRip", "HDTV", "DVD" };
+    private readonly List<string> _videoCodecs = new() { "(无)", "x264", "x265", "AV1" };
+    private readonly List<string> _bitDepths = new() { "(无)", "8bit", "10bit" };
+    private readonly List<string> _audioCodecs = new() { "(无)", "AAC", "FLAC", "AC-3", "E-AC-3", "TrueHD", "DTS", "OPUS", "MP3" };
+    private readonly List<string> _audioChannels = new() { "(无)", "2.0", "2.1", "5.1", "7.1" };
 
     public MainWindow() : base("SeiriTUI · Modern Edition")
     {
@@ -83,6 +87,60 @@ $@"Seiri-TUI · 现代化终端刮削辅助工具
         };
 
         Add(btnAbout);
+        UpdateFrameTitles();
+    }
+
+    private class CycleButton : Button
+    {
+        public Action? CycleNext { get; set; }
+        public Action? CyclePrev { get; set; }
+
+        public CycleButton(string text) : base(text) { }
+
+        public override bool MouseEvent(MouseEvent me)
+        {
+            if (me.Flags.HasFlag(MouseFlags.WheeledDown))
+            {
+                CycleNext?.Invoke();
+                return true;
+            }
+            if (me.Flags.HasFlag(MouseFlags.WheeledUp))
+            {
+                CyclePrev?.Invoke();
+                return true;
+            }
+            return base.MouseEvent(me);
+        }
+    }
+
+    private Button CreateCycleButton(List<string> options, string currentValue, Action<string> onValueChanged)
+    {
+        string text = string.IsNullOrEmpty(currentValue) ? "(无)" : currentValue;
+        if (!options.Contains(text)) text = "(无)";
+        
+        var btn = new CycleButton(text);
+        
+        btn.CycleNext = () =>
+        {
+            var current = btn.Text.ToString();
+            int idx = options.IndexOf(current ?? "");
+            idx = (idx + 1) % options.Count;
+            btn.Text = options[idx];
+            onValueChanged(options[idx] == "(无)" ? "" : options[idx]);
+        };
+
+        btn.CyclePrev = () =>
+        {
+            var current = btn.Text.ToString();
+            int idx = options.IndexOf(current ?? "");
+            idx = (idx - 1 + options.Count) % options.Count;
+            btn.Text = options[idx];
+            onValueChanged(options[idx] == "(无)" ? "" : options[idx]);
+        };
+
+        btn.Clicked += btn.CycleNext;
+        
+        return btn;
     }
 
     private void BuildUi()
@@ -93,7 +151,7 @@ $@"Seiri-TUI · 现代化终端刮削辅助工具
             X = 0,
             Y = 0,
             Width = Dim.Fill(),
-            Height = 9,
+            Height = 10,
             Border = new Border() { BorderStyle = BorderStyle.Rounded }
         };
 
@@ -123,27 +181,15 @@ $@"Seiri-TUI · 现代化终端刮削辅助工具
 
         // ========= 新增的全局分辨率与质量 =========
         var lblGlobalRes = new Label("全局分辨率:") { X = 1, Y = 1 };
-        var cbGlobalRes = new ComboBox() { X = 16, Y = 1, Width = 15, Height = 6, ColorScheme = Colors.TopLevel };
-        cbGlobalRes.SetSource(_resolutions);
-        cbGlobalRes.SelectedItemChanged += (e) =>
-        {
-            string val = e.Value.ToString() ?? "";
-            ViewModel.GlobalResolution = val == "(无)" ? "" : val;
-            RefreshLists();
-        };
+        var btnGlobalRes = CreateCycleButton(_resolutions, ViewModel.GlobalResolution, val => { ViewModel.GlobalResolution = val; RefreshLists(); });
+        btnGlobalRes.X = Pos.Right(lblGlobalRes) + 1; btnGlobalRes.Y = 1;
 
-        var lblGlobalQa = new Label("全局质量:") { X = 35, Y = 1 };
-        var cbGlobalQa = new ComboBox() { X = 46, Y = 1, Width = 15, Height = 6, ColorScheme = Colors.TopLevel };
-        cbGlobalQa.SetSource(_qualities);
-        cbGlobalQa.SelectedItemChanged += (e) =>
-        {
-            string val = e.Value.ToString() ?? "";
-            ViewModel.GlobalQuality = val == "(无)" ? "" : val;
-            RefreshLists();
-        };
+        var lblGlobalQa = new Label("全局质量:") { X = Pos.Right(btnGlobalRes) + 2, Y = 1 };
+        var btnGlobalQa = CreateCycleButton(_qualities, ViewModel.GlobalQuality, val => { ViewModel.GlobalQuality = val; RefreshLists(); });
+        btnGlobalQa.X = Pos.Right(lblGlobalQa) + 1; btnGlobalQa.Y = 1;
 
-        var lblGlobalLang = new Label("默认字幕语言:") { X = 65, Y = 1 };
-        var txtGlobalLang = new TextField(ViewModel.DefaultSubtitleLanguage) { X = 77, Y = 1, Width = 8 };
+        var lblGlobalLang = new Label("默认字幕语言:") { X = Pos.Right(btnGlobalQa) + 2, Y = 1 };
+        var txtGlobalLang = new TextField(ViewModel.DefaultSubtitleLanguage) { X = Pos.Right(lblGlobalLang) + 1, Y = 1, Width = 8 };
         txtGlobalLang.TextChanged += (e) =>
         {
             ViewModel.DefaultSubtitleLanguage = txtGlobalLang.Text.ToString() ?? "";
@@ -151,15 +197,50 @@ $@"Seiri-TUI · 现代化终端刮削辅助工具
         };
         // ===========================================
 
-        var lblSourcePath = new Label("扫描源目录:") { X = 1, Y = 3 };
-        var txtSourcePath = new TextField(Directory.GetCurrentDirectory()) { X = 16, Y = 3, Width = 45 };
+        // ========= 新增的全局补充参数 (Y=2) =========
+        var lblGlobalVC = new Label("视频编码:") { X = 1, Y = 2 };
+        var btnGlobalVC = CreateCycleButton(_videoCodecs, ViewModel.GlobalVideoCodec, val => { ViewModel.GlobalVideoCodec = val; RefreshLists(); });
+        btnGlobalVC.X = Pos.Right(lblGlobalVC) + 1; btnGlobalVC.Y = 2;
+
+        var lblGlobalBD = new Label("色深:") { X = Pos.Right(btnGlobalVC) + 2, Y = 2 };
+        var btnGlobalBD = CreateCycleButton(_bitDepths, ViewModel.GlobalBitDepth, val => { ViewModel.GlobalBitDepth = val; RefreshLists(); });
+        btnGlobalBD.X = Pos.Right(lblGlobalBD) + 1; btnGlobalBD.Y = 2;
+
+        var lblGlobalAC = new Label("音频编码:") { X = Pos.Right(btnGlobalBD) + 2, Y = 2 };
+        
+        // 我们需要先声明 btnGlobalACh，以便在 AC 发生变化时能更新它
+        Button btnGlobalACh = null!;
+        var btnGlobalAC = CreateCycleButton(_audioCodecs, ViewModel.GlobalAudioCodec, val => 
+        { 
+            ViewModel.GlobalAudioCodec = val;
+            string? autoChannel = MainViewModel.GetDefaultChannelForCodec(val);
+            if (autoChannel != null)
+            {
+                btnGlobalACh.Text = autoChannel;
+                ViewModel.GlobalAudioChannel = autoChannel;
+            }
+            RefreshLists(); 
+        });
+        btnGlobalAC.X = Pos.Right(lblGlobalAC) + 1; btnGlobalAC.Y = 2;
+
+        var lblGlobalACh = new Label("声道:") { X = Pos.Right(btnGlobalAC) + 2, Y = 2 };
+        btnGlobalACh = CreateCycleButton(_audioChannels, ViewModel.GlobalAudioChannel, val => { ViewModel.GlobalAudioChannel = val; RefreshLists(); });
+        btnGlobalACh.X = Pos.Right(lblGlobalACh) + 1; btnGlobalACh.Y = 2;
+
+        var lblGlobalRG = new Label("全局发布组:") { X = Pos.Right(btnGlobalACh) + 2, Y = 2 };
+        var txtGlobalRG = new TextField(ViewModel.GlobalReleaseGroup) { X = Pos.Right(lblGlobalRG) + 1, Y = 2, Width = 15 };
+        txtGlobalRG.TextChanged += (e) => { ViewModel.GlobalReleaseGroup = txtGlobalRG.Text.ToString() ?? ""; RefreshLists(); };
+        // ===========================================
+
+        var lblSourcePath = new Label("扫描源目录:") { X = 1, Y = 4 };
+        var txtSourcePath = new TextField(Directory.GetCurrentDirectory()) { X = 16, Y = 4, Width = 45 };
         SetupPathAutocomplete(txtSourcePath);
 
-        var lblTargetPath = new Label("输出根路径:") { X = 1, Y = 4 };
-        var txtTargetPath = new TextField(Directory.GetCurrentDirectory()) { X = 16, Y = 4, Width = 45 };
+        var lblTargetPath = new Label("输出根路径:") { X = 1, Y = 5 };
+        var txtTargetPath = new TextField(Directory.GetCurrentDirectory()) { X = 16, Y = 5, Width = 45 };
         SetupPathAutocomplete(txtTargetPath);
 
-        var btnScan = new Button("执行扫描") { X = 65, Y = 3 };
+        var btnScan = new Button("执行扫描") { X = 65, Y = 4 };
         btnScan.Clicked += () =>
         {
             string sourcePath = txtSourcePath.Text.ToString() ?? "";
@@ -175,17 +256,17 @@ $@"Seiri-TUI · 现代化终端刮削辅助工具
             RefreshLists();
         };
 
-        var cbAutoSeason = new CheckBox("自动创建 Season 文件夹", ViewModel.AutoCreateSeasonFolder) { X = 65, Y = 4 };
+        var cbAutoSeason = new CheckBox("自动创建 Season 文件夹", ViewModel.AutoCreateSeasonFolder) { X = 65, Y = 5 };
         cbAutoSeason.Toggled += (prev) =>
         {
             ViewModel.AutoCreateSeasonFolder = cbAutoSeason.Checked;
             RefreshLists();
         };
 
-        var cbSelectionMode = new CheckBox("启用部分勾选模式", ViewModel.SelectionModeEnabled) { X = 95, Y = 4 };
+        var cbSelectionMode = new CheckBox("启用部分勾选模式", ViewModel.SelectionModeEnabled) { X = 95, Y = 5 };
 
         // 工作模式切换复选框
-        var cbSubtitleMode = new CheckBox("字幕匹配模式", ViewModel.SubtitleMatchingMode) { X = 95, Y = 3 };
+        var cbSubtitleMode = new CheckBox("字幕匹配模式", ViewModel.SubtitleMatchingMode) { X = 95, Y = 4 };
         cbSubtitleMode.Toggled += (prev) =>
         {
             ViewModel.SubtitleMatchingMode = cbSubtitleMode.Checked;
@@ -193,9 +274,9 @@ $@"Seiri-TUI · 现代化终端刮削辅助工具
             RefreshLists();
         };
 
-        var btnSelectAll = new Button("全选") { X = 65, Y = 5, Visible = false };
-        var btnDeselectAll = new Button("全不选") { X = 77, Y = 5, Visible = false };
-        var btnInvertSel = new Button("反选") { X = 91, Y = 5, Visible = false };
+        var btnSelectAll = new Button("全选") { X = 65, Y = 6, Visible = false };
+        var btnDeselectAll = new Button("全不选") { X = 77, Y = 6, Visible = false };
+        var btnInvertSel = new Button("反选") { X = 91, Y = 6, Visible = false };
 
         btnSelectAll.Clicked += () => { ViewModel.SelectAll(); RefreshLists(); };
         btnDeselectAll.Clicked += () => { ViewModel.DeselectAll(); RefreshLists(); };
@@ -212,7 +293,7 @@ $@"Seiri-TUI · 现代化终端刮削辅助工具
         };
 
         // 执行操作面板
-        var btnPanel = new View() { X = 1, Y = 6, Width = Dim.Fill(), Height = 1 };
+        var btnPanel = new View() { X = 1, Y = 7, Width = Dim.Fill(), Height = 1 };
         var btnMove = new Button("重命名(移动)") { X = 0, Y = 0 };
         var btnCopy = new Button("拷贝") { X = 20, Y = 0 };
         var btnLink = new Button("硬链接") { X = 32, Y = 0 };
@@ -239,7 +320,8 @@ $@"Seiri-TUI · 现代化终端刮削辅助工具
         btnPanel.Add(btnMove, btnCopy, btnLink, btnExit);
 
         topFrame.Add(lblShowName, txtShowName, lblSeason, txtSeason, lblStartEp, txtStartEp);
-        topFrame.Add(lblGlobalRes, cbGlobalRes, lblGlobalQa, cbGlobalQa, lblGlobalLang, txtGlobalLang);
+        topFrame.Add(lblGlobalRes, btnGlobalRes, lblGlobalQa, btnGlobalQa, lblGlobalLang, txtGlobalLang);
+        topFrame.Add(lblGlobalVC, btnGlobalVC, lblGlobalBD, btnGlobalBD, lblGlobalAC, btnGlobalAC, lblGlobalACh, btnGlobalACh, lblGlobalRG, txtGlobalRG);
         topFrame.Add(lblSourcePath, txtSourcePath, btnScan);
         topFrame.Add(lblTargetPath, txtTargetPath, cbAutoSeason, cbSelectionMode, cbSubtitleMode, btnSelectAll, btnDeselectAll, btnInvertSel, btnPanel);
 
@@ -317,59 +399,47 @@ $@"Seiri-TUI · 现代化终端刮削辅助工具
         _detailEpisodeField.TextChanged += (e) => UpdateSelectedItemProperty(prop => prop.Episode = int.TryParse(_detailEpisodeField.Text.ToString(), out int val) ? val : null);
 
         var lblDetRes = new Label("分辨率:") { X = Pos.Right(_detailEpisodeField) + 2, Y = 0 };
-        _detailResolutionCombo = new ComboBox()
-        {
-            X = Pos.Right(lblDetRes) + 1,
-            Y = 0,
-            Width = 10,
-            Height = 6,
-            ColorScheme = Colors.TopLevel
-        };
-        _detailResolutionCombo.SetSource(_resolutions);
-        _detailResolutionCombo.SelectedItemChanged += (e) =>
-        {
-            string val = e.Value.ToString() ?? "";
-            UpdateSelectedItemProperty(prop => prop.Resolution = val == "(无)" ? "" : val);
-        };
+        _detailResolutionBtn = CreateCycleButton(_resolutions, "", val => UpdateSelectedItemProperty(prop => prop.Resolution = val));
+        _detailResolutionBtn.X = Pos.Right(lblDetRes) + 1; _detailResolutionBtn.Y = 0;
 
-        var lblDetQa = new Label("质量:") { X = Pos.Right(_detailResolutionCombo) + 2, Y = 0 };
-        _detailQualityCombo = new ComboBox()
-        {
-            X = Pos.Right(lblDetQa) + 1,
-            Y = 0,
-            Width = 10,
-            Height = 6,
-            ColorScheme = Colors.TopLevel
-        };
-        _detailQualityCombo.SetSource(_qualities);
-        _detailQualityCombo.SelectedItemChanged += (e) =>
-        {
-            string val = e.Value.ToString() ?? "";
-            UpdateSelectedItemProperty(prop => prop.Quality = val == "(无)" ? "" : val);
-        };
+        var lblDetQa = new Label("质量:") { X = Pos.Right(_detailResolutionBtn) + 2, Y = 0 };
+        _detailQualityBtn = CreateCycleButton(_qualities, "", val => UpdateSelectedItemProperty(prop => prop.Quality = val));
+        _detailQualityBtn.X = Pos.Right(lblDetQa) + 1; _detailQualityBtn.Y = 0;
 
-        var lblDetLang = new Label("语言:") { X = Pos.Right(_detailQualityCombo) + 2, Y = 0 };
+        var lblDetLang = new Label("语言:") { X = Pos.Right(_detailQualityBtn) + 2, Y = 0 };
         _detailLanguageField = new TextField("") { X = Pos.Right(lblDetLang) + 1, Y = 0, Width = 8 };
         _detailLanguageField.TextChanged += (e) => UpdateSelectedItemProperty(prop => prop.Language = _detailLanguageField.Text.ToString());
 
         // ---- 可选项参数区 (第 1 行): 视频编码 / 色彩深度 / 音频编码 / 音频声道 / 发布组 ----
         var lblDetVC = new Label("视频编码:") { X = 1, Y = 2 };
-        _detailVideoCodecField = new TextField("") { X = Pos.Right(lblDetVC) + 1, Y = 2, Width = 7 };
-        _detailVideoCodecField.TextChanged += (e) => UpdateSelectedItemProperty(prop => prop.VideoCodec = _detailVideoCodecField.Text.ToString());
+        _detailVideoCodecBtn = CreateCycleButton(_videoCodecs, "", val => UpdateSelectedItemProperty(prop => prop.VideoCodec = val));
+        _detailVideoCodecBtn.X = Pos.Right(lblDetVC) + 1; _detailVideoCodecBtn.Y = 2;
 
-        var lblDetBD = new Label("色深:") { X = Pos.Right(_detailVideoCodecField) + 2, Y = 2 };
-        _detailBitDepthField = new TextField("") { X = Pos.Right(lblDetBD) + 1, Y = 2, Width = 6 };
-        _detailBitDepthField.TextChanged += (e) => UpdateSelectedItemProperty(prop => prop.BitDepth = _detailBitDepthField.Text.ToString());
+        var lblDetBD = new Label("色深:") { X = Pos.Right(_detailVideoCodecBtn) + 2, Y = 2 };
+        _detailBitDepthBtn = CreateCycleButton(_bitDepths, "", val => UpdateSelectedItemProperty(prop => prop.BitDepth = val));
+        _detailBitDepthBtn.X = Pos.Right(lblDetBD) + 1; _detailBitDepthBtn.Y = 2;
 
-        var lblDetAC = new Label("音频编码:") { X = Pos.Right(_detailBitDepthField) + 2, Y = 2 };
-        _detailAudioCodecField = new TextField("") { X = Pos.Right(lblDetAC) + 1, Y = 2, Width = 7 };
-        _detailAudioCodecField.TextChanged += (e) => UpdateSelectedItemProperty(prop => prop.AudioCodec = _detailAudioCodecField.Text.ToString());
+        var lblDetAC = new Label("音频编码:") { X = Pos.Right(_detailBitDepthBtn) + 2, Y = 2 };
+        _detailAudioCodecBtn = CreateCycleButton(_audioCodecs, "", val => 
+        {
+            UpdateSelectedItemProperty(prop => 
+            {
+                prop.AudioCodec = val;
+                string? autoChannel = MainViewModel.GetDefaultChannelForCodec(val);
+                if (autoChannel != null)
+                {
+                    prop.AudioChannel = autoChannel;
+                    _detailAudioChannelBtn.Text = autoChannel;
+                }
+            });
+        });
+        _detailAudioCodecBtn.X = Pos.Right(lblDetAC) + 1; _detailAudioCodecBtn.Y = 2;
 
-        var lblDetACh = new Label("声道:") { X = Pos.Right(_detailAudioCodecField) + 2, Y = 2 };
-        _detailAudioChannelField = new TextField("") { X = Pos.Right(lblDetACh) + 1, Y = 2, Width = 5 };
-        _detailAudioChannelField.TextChanged += (e) => UpdateSelectedItemProperty(prop => prop.AudioChannel = _detailAudioChannelField.Text.ToString());
+        var lblDetACh = new Label("声道:") { X = Pos.Right(_detailAudioCodecBtn) + 2, Y = 2 };
+        _detailAudioChannelBtn = CreateCycleButton(_audioChannels, "", val => UpdateSelectedItemProperty(prop => prop.AudioChannel = val));
+        _detailAudioChannelBtn.X = Pos.Right(lblDetACh) + 1; _detailAudioChannelBtn.Y = 2;
 
-        var lblDetRG = new Label("发布组:") { X = Pos.Right(_detailAudioChannelField) + 2, Y = 2 };
+        var lblDetRG = new Label("发布组:") { X = Pos.Right(_detailAudioChannelBtn) + 2, Y = 2 };
         _detailReleaseGroupField = new TextField("") { X = Pos.Right(lblDetRG) + 1, Y = 2, Width = 15 };
         _detailReleaseGroupField.TextChanged += (e) => UpdateSelectedItemProperty(prop => prop.ReleaseGroup = _detailReleaseGroupField.Text.ToString());
 
@@ -377,8 +447,8 @@ $@"Seiri-TUI · 现代化终端刮削辅助工具
         _detailMatchedVideoLabel = new Label("") { X = 1, Y = 5, Width = Dim.Fill() - 1, Visible = false };
         _detailTargetNameLabel = new Label("") { X = 1, Y = 6, Width = Dim.Fill() - 1 };
 
-        detailFrame.Add(lblDetSeason, _detailSeasonField, lblDetEp, _detailEpisodeField, lblDetRes, _detailResolutionCombo, lblDetQa, _detailQualityCombo, lblDetLang, _detailLanguageField);
-        detailFrame.Add(lblDetVC, _detailVideoCodecField, lblDetBD, _detailBitDepthField, lblDetAC, _detailAudioCodecField, lblDetACh, _detailAudioChannelField, lblDetRG, _detailReleaseGroupField);
+        detailFrame.Add(lblDetSeason, _detailSeasonField, lblDetEp, _detailEpisodeField, lblDetRes, _detailResolutionBtn, lblDetQa, _detailQualityBtn, lblDetLang, _detailLanguageField);
+        detailFrame.Add(lblDetVC, _detailVideoCodecBtn, lblDetBD, _detailBitDepthBtn, lblDetAC, _detailAudioCodecBtn, lblDetACh, _detailAudioChannelBtn, lblDetRG, _detailReleaseGroupField);
         detailFrame.Add(_detailOriginalNameLabel, _detailMatchedVideoLabel, _detailTargetNameLabel);
 
         // ======================= 最底部状态栏 =======================
@@ -468,23 +538,19 @@ $@"Seiri-TUI · 现代化终端刮削辅助工具
             _detailEpisodeField.Text = item.Episode?.ToString() ?? "";
             _detailLanguageField.Text = item.Language ?? "";
 
-            // Sync Res Combo
-            string res = string.IsNullOrEmpty(item.Resolution) ? "(无)" : item.Resolution;
-            int ridx = _resolutions.IndexOf(res);
-            if (ridx >= 0) _detailResolutionCombo.SelectedItem = ridx;
-            else _detailResolutionCombo.Text = item.Resolution ?? "";
+            // Sync Res Button
+            _detailResolutionBtn.Text = string.IsNullOrEmpty(item.Resolution) ? "(无)" : item.Resolution;
 
-            // Sync Quality Combo
-            string qa = string.IsNullOrEmpty(item.Quality) ? "(无)" : item.Quality;
-            int qidx = _qualities.IndexOf(qa);
-            if (qidx >= 0) _detailQualityCombo.SelectedItem = qidx;
-            else _detailQualityCombo.Text = item.Quality ?? "";
+            // Sync Quality Button
+            _detailQualityBtn.Text = string.IsNullOrEmpty(item.Quality) ? "(无)" : item.Quality;
 
-            // 可选项
-            _detailVideoCodecField.Text = item.VideoCodec ?? "";
-            _detailBitDepthField.Text = item.BitDepth ?? "";
-            _detailAudioCodecField.Text = item.AudioCodec ?? "";
-            _detailAudioChannelField.Text = item.AudioChannel ?? "";
+            // 可选项同步
+            // 可选项同步
+            _detailVideoCodecBtn.Text = string.IsNullOrEmpty(item.VideoCodec) ? "(无)" : item.VideoCodec;
+            _detailBitDepthBtn.Text = string.IsNullOrEmpty(item.BitDepth) ? "(无)" : item.BitDepth;
+            _detailAudioCodecBtn.Text = string.IsNullOrEmpty(item.AudioCodec) ? "(无)" : item.AudioCodec;
+            _detailAudioChannelBtn.Text = string.IsNullOrEmpty(item.AudioChannel) ? "(无)" : item.AudioChannel;
+
             _detailReleaseGroupField.Text = item.ReleaseGroup ?? "";
 
             UpdateDetailLabels();
