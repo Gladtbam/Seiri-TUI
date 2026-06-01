@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -10,7 +10,9 @@
 
   <PropertyGroup Condition="'$(Configuration)' == 'Release'">
 	<PublishAot>true</PublishAot>
-	<SuppressTrimAnalysisWarnings>false</SuppressTrimAnalysisWarnings>
+	<!-- 抑制终端库 Terminal.Gui 在 AOT 编译时产生的无害反射警告 -->
+	<SuppressTrimAnalysisWarnings>true</SuppressTrimAnalysisWarnings>
+	<SuppressAotAnalysisWarnings>true</SuppressAotAnalysisWarnings>
   </PropertyGroup>
 
   <ItemGroup>

@@ -43,6 +43,39 @@ public partial class MediaFileItem : ObservableObject
     [ObservableProperty]
     private string? _parsedShowName;
 
+    // ====== 解析 参数 (由 RegexParsingService 赋值，不绑定到 UI 的修改框) ======
+    [ObservableProperty]
+    private int? _parsedSeason;
+
+    [ObservableProperty]
+    private int? _parsedEpisode;
+
+    [ObservableProperty]
+    private string? _parsedQuality;
+
+    [ObservableProperty]
+    private string? _parsedResolution;
+
+    [ObservableProperty]
+    private string? _parsedLanguage;
+
+    [ObservableProperty]
+    private string? _parsedVideoCodec;
+
+    [ObservableProperty]
+    private string? _parsedAudioCodec;
+
+    [ObservableProperty]
+    private string? _parsedAudioChannel;
+
+    [ObservableProperty]
+    private string? _parsedBitDepth;
+
+    [ObservableProperty]
+    private string? _parsedReleaseGroup;
+
+
+    // ====== 独立覆盖 参数 (可被用户在 UI 底部专属框独立修改，为空则继承全局或解析参数) ======
     [ObservableProperty]
     private int? _season;
 

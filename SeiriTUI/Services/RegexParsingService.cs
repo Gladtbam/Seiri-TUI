@@ -67,7 +67,7 @@ public partial class RegexParsingService
         var rgMatch = ReleaseGroupRegex().Match(name);
         if (rgMatch.Success)
         {
-            item.ReleaseGroup = rgMatch.Groups[1].Value.Trim();
+            item.ParsedReleaseGroup = rgMatch.Groups[1].Value.Trim();
         }
         else
         {
@@ -75,7 +75,7 @@ public partial class RegexParsingService
             var suffixBracketMatch = SuffixBracketReleaseGroupRegex().Match(name);
             if (suffixBracketMatch.Success)
             {
-                item.ReleaseGroup = suffixBracketMatch.Groups[1].Value.Trim();
+                item.ParsedReleaseGroup = suffixBracketMatch.Groups[1].Value.Trim();
             }
             else
             {
@@ -83,7 +83,7 @@ public partial class RegexParsingService
                 var suffixDashMatch = SuffixDashReleaseGroupRegex().Match(name);
                 if (suffixDashMatch.Success)
                 {
-                    item.ReleaseGroup = suffixDashMatch.Groups[1].Value.Trim();
+                    item.ParsedReleaseGroup = suffixDashMatch.Groups[1].Value.Trim();
                 }
             }
         }
@@ -95,13 +95,13 @@ public partial class RegexParsingService
             string sStr = seasonMatch.Groups[1].Success ? seasonMatch.Groups[1].Value : seasonMatch.Groups[2].Value;
             if (int.TryParse(sStr, out int s))
             {
-                item.Season = s;
+                item.ParsedSeason = s;
             }
         }
         else if (Regex.IsMatch(name, @"(?i)(?:\b|_|-)(ova|oad|sp|special)(?:\b|_|-|0*\d+)"))
         {
             // 如果未明确标明包含季数，但包含了 OVA、OAD 等特殊篇标识，默认归类为第 0 季
-            item.Season = 0;
+            item.ParsedSeason = 0;
         }
 
         // 3. 尝试匹配集数 (Episode) 
@@ -114,7 +114,7 @@ public partial class RegexParsingService
                            epMatch.Groups[3].Value;
             if (int.TryParse(epStr, out int e))
             {
-                item.Episode = e;
+                item.ParsedEpisode = e;
             }
         }
 
@@ -122,7 +122,7 @@ public partial class RegexParsingService
         var resMatch = ResolutionRegex().Match(name);
         if (resMatch.Success)
         {
-            item.Resolution = StandardizeResolution(resMatch.Groups[1].Value);
+            item.ParsedResolution = StandardizeResolution(resMatch.Groups[1].Value);
         }
 
         // 5. 质量/来源
@@ -130,14 +130,14 @@ public partial class RegexParsingService
         if (qualityMatch.Success)
         {
             // 标准化，如 WEB-DL
-            item.Quality = StandardizeQuality(qualityMatch.Groups[1].Value);
+            item.ParsedQuality = StandardizeQuality(qualityMatch.Groups[1].Value);
         }
 
         // 6. 编码
         var codecMatch = VideoCodecRegex().Match(name);
         if (codecMatch.Success)
         {
-            item.VideoCodec = StandardizeCodec(codecMatch.Groups[1].Value);
+            item.ParsedVideoCodec = StandardizeCodec(codecMatch.Groups[1].Value);
         }
 
         // 7. 色彩深度
@@ -147,22 +147,22 @@ public partial class RegexParsingService
             string b = bitDepthMatch.Groups[1].Value.ToLower();
             if (b == "p10" || b == "ma10p" || b == "hi10p" || b == "main10" || b == "high10")
             {
-                item.BitDepth = "10bit";
+                item.ParsedBitDepth = "10bit";
                 
                 // 辅助推断视频编码
-                if (string.IsNullOrEmpty(item.VideoCodec))
+                if (string.IsNullOrEmpty(item.ParsedVideoCodec))
                 {
-                    if (b == "hi10p" || b == "high10") item.VideoCodec = "x264";
-                    else if (b == "ma10p" || b == "main10") item.VideoCodec = "x265";
+                    if (b == "hi10p" || b == "high10") item.ParsedVideoCodec = "x264";
+                    else if (b == "ma10p" || b == "main10") item.ParsedVideoCodec = "x265";
                 }
             }
             else if (b == "p8")
             {
-                item.BitDepth = "8bit";
+                item.ParsedBitDepth = "8bit";
             }
             else
             {
-                item.BitDepth = b;
+                item.ParsedBitDepth = b;
             }
         }
 
@@ -170,18 +170,18 @@ public partial class RegexParsingService
         var audioMatch = AudioCodecRegex().Match(name);
         if (audioMatch.Success)
         {
-            item.AudioCodec = StandardizeAudioCodec(audioMatch.Groups[1].Value);
+            item.ParsedAudioCodec = StandardizeAudioCodec(audioMatch.Groups[1].Value);
         }
 
         // 8.5 音频声道
         var channelMatch = AudioChannelRegex().Match(name);
         if (channelMatch.Success)
         {
-            item.AudioChannel = channelMatch.Groups[1].Value;
+            item.ParsedAudioChannel = channelMatch.Groups[1].Value;
         }
 
         // 9. 解析字幕外挂语言等
-        item.Language = ParseLanguage(item.OriginalFileName);
+        item.ParsedLanguage = ParseLanguage(item.OriginalFileName);
 
         // 10. 智能尝试猜测剧集名 (掐头去尾)
         item.ParsedShowName = GuessShowName(name);

@@ -188,11 +188,11 @@ public partial class MainViewModel : ObservableObject
             ? GlobalShowName
             : (!string.IsNullOrWhiteSpace(item.ParsedShowName) ? item.ParsedShowName : "UnknownShow");
 
-        // 2. 季 (Season)：独立参数 > 全局参数
-        int season = item.Season ?? GlobalSeason;
+        // 2. 季 (Season)：独立参数 > 全局参数 > 解析参数
+        int season = item.Season ?? (GlobalSeason >= 0 ? GlobalSeason : (item.ParsedSeason ?? 1));
 
-        // 3. 集 (Episode)：如果全局设置了起始集，严格计算顺序递增。否则：独立参数 > 1
-        int episode = item.Episode ?? 1;
+        // 3. 集 (Episode)：如果全局设置了起始集，严格计算顺序递增。否则：独立参数 > 解析参数 > 1
+        int episode = item.Episode ?? item.ParsedEpisode ?? 1;
         if (StartEpisode.HasValue)
         {
             int index = MediaFiles.IndexOf(item);
@@ -220,14 +220,14 @@ public partial class MainViewModel : ObservableObject
             baseName = $"{showName} - S{season:D2}E{episode:D2}";
         }
 
-        // 获取分辨率与质量，采用"独立参数(实体/提取) > 全局参数"的策略
-        string finalRes = !string.IsNullOrWhiteSpace(item.Resolution) ? item.Resolution : GlobalResolution;
-        string finalQa = !string.IsNullOrWhiteSpace(item.Quality) ? item.Quality : GlobalQuality;
-        string finalVC = !string.IsNullOrWhiteSpace(item.VideoCodec) ? item.VideoCodec : GlobalVideoCodec;
-        string finalBD = !string.IsNullOrWhiteSpace(item.BitDepth) ? item.BitDepth : GlobalBitDepth;
-        string finalAC = !string.IsNullOrWhiteSpace(item.AudioCodec) ? item.AudioCodec : GlobalAudioCodec;
-        string finalACh = !string.IsNullOrWhiteSpace(item.AudioChannel) ? item.AudioChannel : GlobalAudioChannel;
-        string finalRG = !string.IsNullOrWhiteSpace(item.ReleaseGroup) ? item.ReleaseGroup : GlobalReleaseGroup;
+        // 获取分辨率与质量，采用"独立参数 > 全局参数 > 解析参数"的策略
+        string finalRes = !string.IsNullOrWhiteSpace(item.Resolution) ? item.Resolution : (!string.IsNullOrWhiteSpace(GlobalResolution) ? GlobalResolution : item.ParsedResolution ?? "");
+        string finalQa = !string.IsNullOrWhiteSpace(item.Quality) ? item.Quality : (!string.IsNullOrWhiteSpace(GlobalQuality) ? GlobalQuality : item.ParsedQuality ?? "");
+        string finalVC = !string.IsNullOrWhiteSpace(item.VideoCodec) ? item.VideoCodec : (!string.IsNullOrWhiteSpace(GlobalVideoCodec) ? GlobalVideoCodec : item.ParsedVideoCodec ?? "");
+        string finalBD = !string.IsNullOrWhiteSpace(item.BitDepth) ? item.BitDepth : (!string.IsNullOrWhiteSpace(GlobalBitDepth) ? GlobalBitDepth : item.ParsedBitDepth ?? "");
+        string finalAC = !string.IsNullOrWhiteSpace(item.AudioCodec) ? item.AudioCodec : (!string.IsNullOrWhiteSpace(GlobalAudioCodec) ? GlobalAudioCodec : item.ParsedAudioCodec ?? "");
+        string finalACh = !string.IsNullOrWhiteSpace(item.AudioChannel) ? item.AudioChannel : (!string.IsNullOrWhiteSpace(GlobalAudioChannel) ? GlobalAudioChannel : item.ParsedAudioChannel ?? "");
+        string finalRG = !string.IsNullOrWhiteSpace(item.ReleaseGroup) ? item.ReleaseGroup : (!string.IsNullOrWhiteSpace(GlobalReleaseGroup) ? GlobalReleaseGroup : item.ParsedReleaseGroup ?? "");
 
         // 5. 组凑可选标签：如 [WEBDL-1080p][FLAC][x265 10bit]-ReleaseGroup
         string qr = "";
@@ -258,7 +258,7 @@ public partial class MainViewModel : ObservableObject
         string langSuffix = "";
         bool isSubtitle = item.FileType == MediaFileType.Subtitle;
 
-        string lang = !string.IsNullOrWhiteSpace(item.Language) ? item.Language : DefaultSubtitleLanguage;
+        string lang = !string.IsNullOrWhiteSpace(item.Language) ? item.Language : (!string.IsNullOrWhiteSpace(DefaultSubtitleLanguage) ? DefaultSubtitleLanguage : item.ParsedLanguage ?? "");
         if (isSubtitle && !string.IsNullOrWhiteSpace(lang))
         {
             langSuffix = $".{lang}";
@@ -296,8 +296,8 @@ public partial class MainViewModel : ObservableObject
         else
         {
             // 未找到匹配的视频，回退为常规命名
-            int season = subtitleItem.Season ?? GlobalSeason;
-            int episode = subtitleItem.Episode ?? 1;
+            int season = subtitleItem.Season ?? (GlobalSeason >= 0 ? GlobalSeason : (subtitleItem.ParsedSeason ?? 1));
+            int episode = subtitleItem.Episode ?? subtitleItem.ParsedEpisode ?? 1;
             string showName = !string.IsNullOrWhiteSpace(GlobalShowName)
                 ? GlobalShowName
                 : (!string.IsNullOrWhiteSpace(subtitleItem.ParsedShowName) ? subtitleItem.ParsedShowName : "UnknownShow");
@@ -306,13 +306,13 @@ public partial class MainViewModel : ObservableObject
 
         // 3. 构建字幕后缀：.[Group].[Lang].ext (缺失智能消除点号)
         var suffixParts = new List<string>();
-        string finalRG = !string.IsNullOrWhiteSpace(subtitleItem.ReleaseGroup) ? subtitleItem.ReleaseGroup : GlobalReleaseGroup;
+        string? finalRG = !string.IsNullOrWhiteSpace(subtitleItem.ReleaseGroup) ? subtitleItem.ReleaseGroup : (!string.IsNullOrWhiteSpace(GlobalReleaseGroup) ? GlobalReleaseGroup : subtitleItem.ParsedReleaseGroup);
         if (!string.IsNullOrWhiteSpace(finalRG))
             suffixParts.Add(finalRG);
 
         string lang = !string.IsNullOrWhiteSpace(subtitleItem.Language)
             ? subtitleItem.Language
-            : DefaultSubtitleLanguage;
+            : (!string.IsNullOrWhiteSpace(DefaultSubtitleLanguage) ? DefaultSubtitleLanguage : subtitleItem.ParsedLanguage ?? "");
         if (!string.IsNullOrWhiteSpace(lang))
             suffixParts.Add(lang);
 
@@ -321,7 +321,7 @@ public partial class MainViewModel : ObservableObject
         string fileName = $"{videoBaseName}{suffix}{subtitleItem.Extension}";
 
         // 4. 处理父目录
-        int finalSeason = subtitleItem.Season ?? GlobalSeason;
+        int finalSeason = subtitleItem.Season ?? (GlobalSeason >= 0 ? GlobalSeason : (subtitleItem.ParsedSeason ?? 1));
         string seasonFolder = AutoCreateSeasonFolder ? $"Season {finalSeason:D2}" : "";
 
         subtitleItem.TargetFileName = string.IsNullOrEmpty(seasonFolder)
@@ -334,13 +334,13 @@ public partial class MainViewModel : ObservableObject
     /// </summary>
     private void MatchSubtitleToVideo(MediaFileItem subtitleItem)
     {
-        int subSeason = subtitleItem.Season ?? GlobalSeason;
-        int subEpisode = subtitleItem.Episode ?? 1;
+        int subSeason = subtitleItem.Season ?? (GlobalSeason >= 0 ? GlobalSeason : (subtitleItem.ParsedSeason ?? 1));
+        int subEpisode = subtitleItem.Episode ?? subtitleItem.ParsedEpisode ?? 1;
 
         var matchedVideo = MediaFiles.FirstOrDefault(f =>
             f.FileType == MediaFileType.Video &&
-            (f.Season ?? GlobalSeason) == subSeason &&
-            (f.Episode ?? 1) == subEpisode);
+            (f.Season ?? (GlobalSeason >= 0 ? GlobalSeason : (f.ParsedSeason ?? 1))) == subSeason &&
+            (f.Episode ?? f.ParsedEpisode ?? 1) == subEpisode);
 
         subtitleItem.AssociatedVideoItem = matchedVideo;
     }

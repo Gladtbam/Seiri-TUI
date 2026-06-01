@@ -27,14 +27,14 @@ public class RegexParsingServiceTests
         _parser.Parse(item);
 
         // Assert
-        item.ReleaseGroup.Should().Be("VCB-Studio");
-        item.Episode.Should().Be(1);
-        item.Resolution.Should().Be("1080p");
-        item.VideoCodec.Should().Be("x265");
-        item.BitDepth.Should().Be("10bit");
-        item.AudioCodec.Should().Be("AAC");
-        item.AudioChannel.Should().Be("2.0");
-        item.Language.Should().Be("zh-Hans");
+        item.ParsedReleaseGroup.Should().Be("VCB-Studio");
+        item.ParsedEpisode.Should().Be(1);
+        item.ParsedResolution.Should().Be("1080p");
+        item.ParsedVideoCodec.Should().Be("x265");
+        item.ParsedBitDepth.Should().Be("10bit");
+        item.ParsedAudioCodec.Should().Be("AAC");
+        item.ParsedAudioChannel.Should().Be("2.0");
+        item.ParsedLanguage.Should().Be("zh-Hans");
     }
 
     [Fact]
@@ -48,11 +48,11 @@ public class RegexParsingServiceTests
 
         _parser.Parse(item);
 
-        item.Season.Should().Be(1);
-        item.Episode.Should().Be(3);
-        item.Resolution.Should().Be("1080p");
-        item.Quality.Should().Be("WEBDL");
-        item.VideoCodec.Should().Be("x265");
+        item.ParsedSeason.Should().Be(1);
+        item.ParsedEpisode.Should().Be(3);
+        item.ParsedResolution.Should().Be("1080p");
+        item.ParsedQuality.Should().Be("WEBDL");
+        item.ParsedVideoCodec.Should().Be("x265");
     }
 
     [Theory]
@@ -63,7 +63,7 @@ public class RegexParsingServiceTests
     {
         var item = new MediaFileItem { OriginalFileName = fileName };
         _parser.Parse(item);
-        item.ReleaseGroup.Should().Be(expectedGroup);
+        item.ParsedReleaseGroup.Should().Be(expectedGroup);
     }
 
     /// <summary>
@@ -78,7 +78,7 @@ public class RegexParsingServiceTests
     {
         var item = new MediaFileItem { OriginalFileName = fileName };
         _parser.Parse(item);
-        item.ReleaseGroup.Should().Be(expectedGroup);
+        item.ParsedReleaseGroup.Should().Be(expectedGroup);
     }
 
     [Fact]
@@ -93,8 +93,8 @@ public class RegexParsingServiceTests
         _parser.Parse(item);
 
         item.ParsedShowName.Should().Be("The Last Of Us");
-        item.Season.Should().Be(1);
-        item.Episode.Should().Be(3);
+        item.ParsedSeason.Should().Be(1);
+        item.ParsedEpisode.Should().Be(3);
     }
 
     [Fact]
@@ -109,14 +109,14 @@ public class RegexParsingServiceTests
         _parser.Parse(item);
 
         item.ParsedShowName.Should().Be("Chitose Is in the Ramune Bottle");
-        item.Season.Should().Be(1);
-        item.Episode.Should().Be(12);
-        item.Resolution.Should().Be("1080p");
-        item.Quality.Should().Be("WEBDL");
-        item.AudioCodec.Should().Be("AAC");
-        item.AudioChannel.Should().Be("2.0");
-        item.VideoCodec.Should().Be("x264");
-        item.ReleaseGroup.Should().Be("ToonsHub");
+        item.ParsedSeason.Should().Be(1);
+        item.ParsedEpisode.Should().Be(12);
+        item.ParsedResolution.Should().Be("1080p");
+        item.ParsedQuality.Should().Be("WEBDL");
+        item.ParsedAudioCodec.Should().Be("AAC");
+        item.ParsedAudioChannel.Should().Be("2.0");
+        item.ParsedVideoCodec.Should().Be("x264");
+        item.ParsedReleaseGroup.Should().Be("ToonsHub");
     }
 
     // ==================== 复杂集数提取测试 ====================
@@ -132,13 +132,13 @@ public class RegexParsingServiceTests
 
         _parser.Parse(item);
 
-        item.Episode.Should().Be(12);
-        item.ReleaseGroup.Should().Be("Snow-Raws");
-        item.Resolution.Should().Be("1080p");
-        item.Quality.Should().Be("BD");
-        item.VideoCodec.Should().Be("x265");
-        item.BitDepth.Should().Be("10bit");
-        item.AudioCodec.Should().Be("FLAC");
+        item.ParsedEpisode.Should().Be(12);
+        item.ParsedReleaseGroup.Should().Be("Snow-Raws");
+        item.ParsedResolution.Should().Be("1080p");
+        item.ParsedQuality.Should().Be("BD");
+        item.ParsedVideoCodec.Should().Be("x265");
+        item.ParsedBitDepth.Should().Be("10bit");
+        item.ParsedAudioCodec.Should().Be("FLAC");
     }
 
     [Fact]
@@ -152,11 +152,11 @@ public class RegexParsingServiceTests
 
         _parser.Parse(item);
 
-        item.AudioChannel.Should().Be("2.0");
-        item.Resolution.Should().Be("1080p");
-        item.VideoCodec.Should().Be("x264");
-        item.AudioCodec.Should().Be("AAC");
-        item.ReleaseGroup.Should().Be("VARYG");
+        item.ParsedAudioChannel.Should().Be("2.0");
+        item.ParsedResolution.Should().Be("1080p");
+        item.ParsedVideoCodec.Should().Be("x264");
+        item.ParsedAudioCodec.Should().Be("AAC");
+        item.ParsedReleaseGroup.Should().Be("VARYG");
     }
 
     [Fact]
@@ -170,14 +170,14 @@ public class RegexParsingServiceTests
         _parser.Parse(item2);
         _parser.Parse(item3);
 
-        item1.Season.Should().Be(0);
-        item1.Episode.Should().Be(1);
+        item1.ParsedSeason.Should().Be(0);
+        item1.ParsedEpisode.Should().Be(1);
 
-        item2.Season.Should().Be(0);
-        item2.Episode.Should().Be(3);
+        item2.ParsedSeason.Should().Be(0);
+        item2.ParsedEpisode.Should().Be(3);
 
-        item3.Season.Should().Be(0);
-        item3.Episode.Should().Be(2);
+        item3.ParsedSeason.Should().Be(0);
+        item3.ParsedEpisode.Should().Be(2);
     }
 
     /// <summary>
@@ -192,7 +192,7 @@ public class RegexParsingServiceTests
     {
         var item = new MediaFileItem { OriginalFileName = fileName };
         _parser.Parse(item);
-        item.Episode.Should().Be(expectedEp);
+        item.ParsedEpisode.Should().Be(expectedEp);
     }
 
     // ==================== 语言标签转化测试 ====================
@@ -208,7 +208,7 @@ public class RegexParsingServiceTests
     {
         var item = new MediaFileItem { OriginalFileName = fileName };
         _parser.Parse(item);
-        item.Language.Should().Be(expectedLang);
+        item.ParsedLanguage.Should().Be(expectedLang);
     }
 
     /// <summary>
@@ -225,7 +225,7 @@ public class RegexParsingServiceTests
     {
         var item = new MediaFileItem { OriginalFileName = fileName };
         _parser.Parse(item);
-        item.Language.Should().Be(expectedLang);
+        item.ParsedLanguage.Should().Be(expectedLang);
     }
 
     [Theory]
@@ -237,7 +237,7 @@ public class RegexParsingServiceTests
     {
         var item = new MediaFileItem { OriginalFileName = fileName };
         _parser.Parse(item);
-        item.Language.Should().BeNull(); // 必须是 null，不能被误识别为 en 或 sc 等
+        item.ParsedLanguage.Should().BeNull(); // 必须是 null，不能被误识别为 en 或 sc 等
     }
 
     // ==================== 媒体介质全参数提取测试 ====================
@@ -254,12 +254,12 @@ public class RegexParsingServiceTests
         _parser.Parse(item);
 
         // 六大属性应当全部被准确提取
-        item.Quality.Should().Be("BDRip", "质量 (Quality) 提取失败");
-        item.Resolution.Should().Be("1080p", "分辨率 (Resolution) 提取失败");
-        item.VideoCodec.Should().Be("x265", "视频编码 (VideoCodec/HEVC) 提取失败");
-        item.BitDepth.Should().Be("10bit", "色彩深度 (BitDepth) 提取失败");
-        item.AudioCodec.Should().Be("FLAC", "音频编码 (AudioCodec) 提取失败");
-        item.AudioChannel.Should().Be("5.1", "音频声道 (AudioChannel) 提取失败");
+        item.ParsedQuality.Should().Be("BDRip", "质量 (Quality) 提取失败");
+        item.ParsedResolution.Should().Be("1080p", "分辨率 (Resolution) 提取失败");
+        item.ParsedVideoCodec.Should().Be("x265", "视频编码 (VideoCodec/HEVC) 提取失败");
+        item.ParsedBitDepth.Should().Be("10bit", "色彩深度 (BitDepth) 提取失败");
+        item.ParsedAudioCodec.Should().Be("FLAC", "音频编码 (AudioCodec) 提取失败");
+        item.ParsedAudioChannel.Should().Be("5.1", "音频声道 (AudioChannel) 提取失败");
     }
 
     [Theory]
@@ -272,7 +272,7 @@ public class RegexParsingServiceTests
     {
         var item = new MediaFileItem { OriginalFileName = fileName };
         _parser.Parse(item);
-        item.BitDepth.Should().Be(expectedBitDepth);
-        item.VideoCodec.Should().Be(expectedCodec);
+        item.ParsedBitDepth.Should().Be(expectedBitDepth);
+        item.ParsedVideoCodec.Should().Be(expectedCodec);
     }
 }
