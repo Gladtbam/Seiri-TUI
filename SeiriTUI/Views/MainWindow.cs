@@ -34,6 +34,10 @@ public class MainWindow : Window
     private FrameView _leftFrame;
     private FrameView _rightFrame;
 
+    // Status area
+    private Label _statusMsgLabel;
+    private Label _statusPathLabel;
+
     private readonly List<string> _resolutions = new() { "(无)", "2160p", "1080p", "720p", "480p" };
     private readonly List<string> _qualities = new() { "(无)", "WEBDL", "WEBRip", "BD", "BDRip", "HDTV", "DVD" };
     private readonly List<string> _videoCodecs = new() { "(无)", "x264", "x265", "AV1" };
@@ -332,7 +336,7 @@ $@"Seiri-TUI · 现代化终端刮削辅助工具
 
 
         // ======================= 中部对比列表 =======================
-        var listContainer = new View() { X = 0, Y = Pos.Bottom(topFrame), Width = Dim.Fill(), Height = Dim.Fill(10) };
+        var listContainer = new View() { X = 0, Y = Pos.Bottom(topFrame), Width = Dim.Fill(), Height = Dim.Fill(12) };
 
         _leftFrame = new FrameView("Input.Files ()")
         {
@@ -471,19 +475,42 @@ $@"Seiri-TUI · 现代化终端刮削辅助工具
         detailFrame.Add(_detailOriginalNameLabel, _detailMatchedVideoLabel, _detailTargetNameLabel);
 
         // ======================= 最底部状态栏 =======================
-        var statusMsgItem = new StatusItem(Key.Null, "Status: Ready", null);
-        var statusPathItem = new StatusItem(Key.Null, "", null);
-
-        var statusBar = new StatusBar([
-            new StatusItem(Key.CtrlMask | Key.Q, "~CTRL-Q~ Quit", () => Application.RequestStop()),
-            statusMsgItem,
-            statusPathItem
-        ]);
+        var statusFrame = new FrameView("Status")
+        {
+            X = 0,
+            Y = Pos.Bottom(detailFrame),
+            Width = Dim.Fill(),
+            Height = 3,
+            Border = new Border() { BorderStyle = BorderStyle.Rounded }
+        };
 
         var errorTheme = new ColorScheme()
         {
             Normal = Application.Driver.MakeAttribute(Color.Red, Color.Black),
             HotNormal = Application.Driver.MakeAttribute(Color.BrightRed, Color.Black)
+        };
+        var normalTheme = new ColorScheme()
+        {
+            Normal = Application.Driver.MakeAttribute(Color.Gray, Color.Black),
+            HotNormal = Application.Driver.MakeAttribute(Color.White, Color.Black)
+        };
+
+        _statusMsgLabel = new Label("Status: Ready") { X = 1, Y = 0, Width = Dim.Fill() - 1, ColorScheme = normalTheme };
+        _statusPathLabel = new Label("") { X = 1, Y = 0, Width = 0, Visible = false }; // 隐藏备用
+
+        // CTRL-Q 快捷键提示标签
+        var lblShortcut = new Label("CTRL-Q 退出") { X = Pos.AnchorEnd(14), Y = 0, ColorScheme = normalTheme };
+
+        statusFrame.Add(_statusMsgLabel, lblShortcut);
+
+        // 绑定全局快捷键
+        KeyPress += (e) =>
+        {
+            if (e.KeyEvent.Key == (Key.CtrlMask | Key.Q))
+            {
+                Application.RequestStop();
+                e.Handled = true;
+            }
         };
 
         ViewModel.PropertyChanged += (s, e) =>
@@ -493,14 +520,14 @@ $@"Seiri-TUI · 现代化终端刮削辅助工具
                 Application.MainLoop.Invoke(() =>
                 {
                     string msg = ViewModel.GlobalStatusMessage;
-                    statusMsgItem.Title = msg;
+                    _statusMsgLabel.Text = msg;
 
                     if (msg.Contains("Error", StringComparison.OrdinalIgnoreCase) || msg.Contains("失败") || msg.Contains("异常"))
-                        statusBar.ColorScheme = errorTheme;
+                        _statusMsgLabel.ColorScheme = errorTheme;
                     else
-                        statusBar.ColorScheme = ColorScheme; // 恢复默认暗黑配色
+                        _statusMsgLabel.ColorScheme = normalTheme;
 
-                    statusBar.SetNeedsDisplay();
+                    statusFrame.SetNeedsDisplay();
                 });
             }
             else if (e.PropertyName == nameof(MainViewModel.SelectedItem))
@@ -512,16 +539,11 @@ $@"Seiri-TUI · 现代化终端刮削辅助工具
                     {
                         if (curItem.HasError)
                         {
-                            // 选中的文件包含出错信息，立即投射到底部大红框
+                            // 选中的文件包含出错信息，立即投射到底部状态区
                             ViewModel.GlobalStatusMessage = $"[选定单项错误] {curItem.StatusMessage}";
                         }
-                        statusPathItem.Title = $"| Path: {curItem.OriginalPath}";
                     }
-                    else
-                    {
-                        statusPathItem.Title = "";
-                    }
-                    statusBar.SetNeedsDisplay();
+                    statusFrame.SetNeedsDisplay();
                 });
             }
         };
@@ -571,7 +593,7 @@ $@"Seiri-TUI · 现代化终端刮削辅助工具
         };
         updateVisibility.Invoke();
 
-        Add(topFrame, listContainer, detailFrame, statusBar);
+        Add(topFrame, listContainer, detailFrame, statusFrame);
     }
 
     private void UpdateSelectedItemProperty(Action<MediaFileItem> updateAction)
