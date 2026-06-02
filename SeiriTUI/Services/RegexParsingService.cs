@@ -18,6 +18,11 @@ public partial class RegexParsingService
     [GeneratedRegex(@"(?i)(?:e|ep|episode|ova|oad|sp|special)[\s\._\-]*(\d+)|第\s*(\d+)\s*(?:话|話|集)|(?<=\s|^|\[|-)0*(\d{1,4})(?:v\d+)?(?=\s|$|\]|-)", RegexOptions.Compiled)]
     private static partial Regex EpisodeRegex();
 
+    // 匹配多集范围：E01-E03, EP01-EP03, S01E01-E03, 第1-3集/话/話
+    // 也匹配裸数字范围如 - 01-03, [01-03]
+    [GeneratedRegex(@"(?i)(?:e|ep|episode)[\s\._\-]*(\d+)\s*-\s*(?:e|ep|episode)?[\s\._\-]*(\d+)|第\s*(\d+)\s*[-~]\s*(\d+)\s*(?:话|話|集)|(?<=\s|^|\[|-)0*(\d{1,4})(?:v\d+)?\s*-\s*0*(\d{1,4})(?:v\d+)?(?=\s|$|\]|-)", RegexOptions.Compiled)]
+    private static partial Regex MultiEpisodeRegex();
+
     // 匹配分辨率 (1080p, 2160p, 4k, 720p, 1920x1080等)
     [GeneratedRegex(@"(?i)(1080[pi]|720[pi]|2160[pi]|4k|8k|1920x1080|1280x720|3840x2160)", RegexOptions.Compiled)]
     private static partial Regex ResolutionRegex();
@@ -105,16 +110,50 @@ public partial class RegexParsingService
         }
 
         // 3. 尝试匹配集数 (Episode) 
-        // 应对多种模式，需要剔除已经被识别为季数的部分或者单独处理 S01E02 中的 E02 
-        var epMatch = EpisodeRegex().Match(name);
-        if (epMatch.Success)
+        // 3a. 先尝试多集范围匹配（如 E01-E03, EP01-EP03, 01-03, 第1-3集）
+        var multiEpMatch = MultiEpisodeRegex().Match(name);
+        if (multiEpMatch.Success)
         {
-            string epStr = epMatch.Groups[1].Success ? epMatch.Groups[1].Value :
-                           epMatch.Groups[2].Success ? epMatch.Groups[2].Value :
-                           epMatch.Groups[3].Value;
-            if (int.TryParse(epStr, out int e))
+            // 提取起始集和结束集
+            string startStr, endStr;
+            if (multiEpMatch.Groups[1].Success)
             {
-                item.ParsedEpisode = e;
+                // E01-E03 / EP01-EP03 格式
+                startStr = multiEpMatch.Groups[1].Value;
+                endStr = multiEpMatch.Groups[2].Value;
+            }
+            else if (multiEpMatch.Groups[3].Success)
+            {
+                // 第1-3集/话/話 格式
+                startStr = multiEpMatch.Groups[3].Value;
+                endStr = multiEpMatch.Groups[4].Value;
+            }
+            else
+            {
+                // 裸数字范围 01-03 格式
+                startStr = multiEpMatch.Groups[5].Value;
+                endStr = multiEpMatch.Groups[6].Value;
+            }
+
+            if (int.TryParse(startStr, out int epStart) && int.TryParse(endStr, out int epEnd))
+            {
+                item.ParsedEpisode = epStart;
+                item.ParsedEpisodeEnd = epEnd;
+            }
+        }
+        else
+        {
+            // 3b. 回退到单集匹配
+            var epMatch = EpisodeRegex().Match(name);
+            if (epMatch.Success)
+            {
+                string epStr = epMatch.Groups[1].Success ? epMatch.Groups[1].Value :
+                               epMatch.Groups[2].Success ? epMatch.Groups[2].Value :
+                               epMatch.Groups[3].Value;
+                if (int.TryParse(epStr, out int e))
+                {
+                    item.ParsedEpisode = e;
+                }
             }
         }
 

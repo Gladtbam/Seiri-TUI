@@ -193,6 +193,7 @@ public partial class MainViewModel : ObservableObject
 
         // 3. 集 (Episode)：如果全局设置了起始集，严格计算顺序递增。否则：独立参数 > 解析参数 > 1
         int episode = item.Episode ?? item.ParsedEpisode ?? 1;
+        int? episodeEnd = item.EpisodeEnd ?? item.ParsedEpisodeEnd;
         if (StartEpisode.HasValue)
         {
             int index = MediaFiles.IndexOf(item);
@@ -206,10 +207,18 @@ public partial class MainViewModel : ObservableObject
 
                 // 第 N 个不重复的文件组，它的偏移量就应该是 (N - 1)
                 episode = StartEpisode.Value + (distinctCount - 1);
+
+                // 多集文件保持集数跨度：如原文件为 01-03，起始集=5，则变为 05-07
+                if (episodeEnd.HasValue)
+                {
+                    int originalStart = item.Episode ?? item.ParsedEpisode ?? 1;
+                    int span = episodeEnd.Value - originalStart;
+                    episodeEnd = episode + span;
+                }
             }
         }
 
-        // 4. 基础命名构建：ShowName - S01E01 或 ShowName
+        // 4. 基础命名构建：ShowName - S01E01 或 ShowName - S01E01-E03 或 ShowName
         string baseName;
         if (MovieMode)
         {
@@ -217,7 +226,10 @@ public partial class MainViewModel : ObservableObject
         }
         else
         {
-            baseName = $"{showName} - S{season:D2}E{episode:D2}";
+            string epPart = episodeEnd.HasValue && episodeEnd.Value != episode
+                ? $"E{episode:D2}-E{episodeEnd.Value:D2}"
+                : $"E{episode:D2}";
+            baseName = $"{showName} - S{season:D2}{epPart}";
         }
 
         // 获取分辨率与质量，采用"独立参数 > 全局参数 > 解析参数"的策略
@@ -298,10 +310,14 @@ public partial class MainViewModel : ObservableObject
             // 未找到匹配的视频，回退为常规命名
             int season = subtitleItem.Season ?? (GlobalSeason >= 0 ? GlobalSeason : (subtitleItem.ParsedSeason ?? 1));
             int episode = subtitleItem.Episode ?? subtitleItem.ParsedEpisode ?? 1;
+            int? episodeEnd = subtitleItem.EpisodeEnd ?? subtitleItem.ParsedEpisodeEnd;
             string showName = !string.IsNullOrWhiteSpace(GlobalShowName)
                 ? GlobalShowName
                 : (!string.IsNullOrWhiteSpace(subtitleItem.ParsedShowName) ? subtitleItem.ParsedShowName : "UnknownShow");
-            videoBaseName = $"{showName} - S{season:D2}E{episode:D2}";
+            string epPart = episodeEnd.HasValue && episodeEnd.Value != episode
+                ? $"E{episode:D2}-E{episodeEnd.Value:D2}"
+                : $"E{episode:D2}";
+            videoBaseName = $"{showName} - S{season:D2}{epPart}";
         }
 
         // 3. 构建字幕后缀：.[Group].[Lang].ext (缺失智能消除点号)

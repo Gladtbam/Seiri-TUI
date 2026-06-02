@@ -460,4 +460,101 @@ public class MainViewModelTests
         var result = MainViewModel.GetDefaultChannelForCodec(codec);
         result.Should().Be(expectedChannel);
     }
+
+    // ==================== 多集识别与生成测试 ====================
+
+    /// <summary>
+    /// 多集文件应生成 S01E01-E03 格式的目标文件名
+    /// </summary>
+    [Fact]
+    public void RecalculateTargetFileName_ShouldGenerateMultiEpisodeFormat()
+    {
+        var vm = new MainViewModel(new MockFileOperationService());
+
+        var item = new MediaFileItem
+        {
+            ParsedShowName = "ShowName",
+            ParsedEpisode = 1,
+            ParsedEpisodeEnd = 3,
+            Extension = ".mkv"
+        };
+
+        vm.RecalculateTargetFileName(item);
+
+        item.TargetFileName.Should().Contain("S01E01-E03");
+    }
+
+    /// <summary>
+    /// 独立参数的多集覆盖应正确生效
+    /// </summary>
+    [Fact]
+    public void RecalculateTargetFileName_ShouldSupportIndependentMultiEpisodeOverride()
+    {
+        var vm = new MainViewModel(new MockFileOperationService());
+
+        var item = new MediaFileItem
+        {
+            ParsedShowName = "ShowName",
+            ParsedEpisode = 1,
+            Episode = 5,
+            EpisodeEnd = 8,
+            Extension = ".mkv"
+        };
+
+        vm.RecalculateTargetFileName(item);
+
+        item.TargetFileName.Should().Contain("S01E05-E08");
+    }
+
+    /// <summary>
+    /// 起始集应保持多集文件的集数跨度 (offset 整体平移)
+    /// </summary>
+    [Fact]
+    public void RecalculateTargetFileName_ShouldPreserveMultiEpisodeSpan_WhenStartEpisodeIsSet()
+    {
+        var vm = new MainViewModel(new MockFileOperationService());
+        vm.StartEpisode = 10;
+
+        var item = new MediaFileItem
+        {
+            OriginalFileName = "Show E01-E03.mkv",
+            ParsedShowName = "ShowName",
+            ParsedEpisode = 1,
+            ParsedEpisodeEnd = 3,
+            Extension = ".mkv"
+        };
+        vm.MediaFiles.Add(item);
+
+        vm.RecalculateTargetFileName(item);
+
+        // 原始 1-3 (跨度 2), 起始集 10, 应变为 10-12
+        item.TargetFileName.Should().Contain("S01E10-E12");
+    }
+
+    /// <summary>
+    /// 多集文件全量数据的完整文件名组装
+    /// </summary>
+    [Fact]
+    public void RecalculateTargetFileName_ShouldAssembleCorrectly_WithMultiEpisodeFullData()
+    {
+        var vm = new MainViewModel(new MockFileOperationService());
+
+        var item = new MediaFileItem
+        {
+            ParsedShowName = "ShowName",
+            Season = 1,
+            Episode = 1,
+            EpisodeEnd = 3,
+            Quality = "BDRip",
+            Resolution = "1080p",
+            VideoCodec = "x265",
+            BitDepth = "10bit",
+            ReleaseGroup = "RG",
+            Extension = ".mkv"
+        };
+
+        vm.RecalculateTargetFileName(item);
+
+        item.TargetFileName.Should().Be("ShowName - S01E01-E03 - [BDRip-1080p][x265 10bit]-RG.mkv");
+    }
 }

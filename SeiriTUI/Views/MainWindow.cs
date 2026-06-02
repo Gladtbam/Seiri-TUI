@@ -400,8 +400,22 @@ $@"Seiri-TUI · 现代化终端刮削辅助工具
         _detailSeasonField.TextChanged += (e) => UpdateSelectedItemProperty(prop => prop.Season = int.TryParse(_detailSeasonField.Text.ToString(), out int val) ? val : null);
 
         var lblDetEp = new Label("集:") { X = Pos.Right(_detailSeasonField) + 2, Y = 0 };
-        _detailEpisodeField = new TextField("") { X = Pos.Right(lblDetEp) + 1, Y = 0, Width = 4 };
-        _detailEpisodeField.TextChanged += (e) => UpdateSelectedItemProperty(prop => prop.Episode = int.TryParse(_detailEpisodeField.Text.ToString(), out int val) ? val : null);
+        _detailEpisodeField = new TextField("") { X = Pos.Right(lblDetEp) + 1, Y = 0, Width = 8 };
+        _detailEpisodeField.TextChanged += (e) => UpdateSelectedItemProperty(prop =>
+        {
+            string text = _detailEpisodeField.Text.ToString() ?? "";
+            if (text.Contains('-'))
+            {
+                var parts = text.Split('-', 2);
+                prop.Episode = int.TryParse(parts[0].Trim(), out int s) ? s : null;
+                prop.EpisodeEnd = int.TryParse(parts[1].Trim(), out int en) ? en : null;
+            }
+            else
+            {
+                prop.Episode = int.TryParse(text, out int val) ? val : null;
+                prop.EpisodeEnd = null;
+            }
+        });
 
         var lblDetRes = new Label("分辨率:") { X = Pos.Right(_detailEpisodeField) + 2, Y = 0 };
         _detailResolutionBtn = CreateCycleButton(_resolutions, "", val => UpdateSelectedItemProperty(prop => prop.Resolution = val));
@@ -585,7 +599,11 @@ $@"Seiri-TUI · 现代化终端刮削辅助工具
 
             // 必须项
             _detailSeasonField.Text = item.Season?.ToString() ?? "";
-            _detailEpisodeField.Text = item.Episode?.ToString() ?? "";
+            // 集数显示：多集显示为 "1-3"，单集显示为 "1"
+            string epDisplay = item.Episode.HasValue
+                ? (item.EpisodeEnd.HasValue ? $"{item.Episode}-{item.EpisodeEnd}" : item.Episode.ToString()!)
+                : "";
+            _detailEpisodeField.Text = epDisplay;
             _detailLanguageField.Text = item.Language ?? "";
 
             // Sync Res Button

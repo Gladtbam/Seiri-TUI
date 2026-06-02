@@ -50,6 +50,10 @@ public partial class MediaFileItem : ObservableObject
     [ObservableProperty]
     private int? _parsedEpisode;
 
+    /// <summary>多集范围的结束集数（由正则提取，单集时为 null）</summary>
+    [ObservableProperty]
+    private int? _parsedEpisodeEnd;
+
     [ObservableProperty]
     private string? _parsedQuality;
 
@@ -81,6 +85,10 @@ public partial class MediaFileItem : ObservableObject
 
     [ObservableProperty]
     private int? _episode;
+
+    /// <summary>独立覆盖的结束集数（单集时为 null）</summary>
+    [ObservableProperty]
+    private int? _episodeEnd;
 
     [ObservableProperty]
     private string? _quality;

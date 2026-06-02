@@ -195,6 +195,39 @@ public class RegexParsingServiceTests
         item.ParsedEpisode.Should().Be(expectedEp);
     }
 
+    // ==================== 多集识别测试 ====================
+
+    [Theory]
+    [InlineData("[Group] Show S01E01-E03 [1080p].mkv", 1, 3)]
+    [InlineData("[Group] Show EP01-EP03 [1080p].mkv", 1, 3)]
+    [InlineData("[Group] Show - 01-03 [1080p].mkv", 1, 3)]
+    [InlineData("[Group] Show 第1-3話.mkv", 1, 3)]
+    [InlineData("ShowName S01E01-E13 [BDRip].mkv", 1, 13)]
+    [InlineData("[VCB-Studio] Show E05-E08 [1080p].mkv", 5, 8)]
+    [InlineData("Show 第10~12集 [720p].mkv", 10, 12)]
+    public void Parse_ShouldExtractMultiEpisodeRange(string fileName, int expectedStart, int expectedEnd)
+    {
+        var item = new MediaFileItem { OriginalFileName = fileName };
+        _parser.Parse(item);
+        item.ParsedEpisode.Should().Be(expectedStart);
+        item.ParsedEpisodeEnd.Should().Be(expectedEnd);
+    }
+
+    /// <summary>
+    /// 单集文件不应被误识别为多集
+    /// </summary>
+    [Theory]
+    [InlineData("[Group] Show [01].mkv")]
+    [InlineData("Show - 08v2 [1080p].mkv")]
+    [InlineData("Show EP05 [720p].mkv")]
+    [InlineData("[VCB-Studio] Anime [01][1080p][HEVC 10bit].mkv")]
+    public void Parse_ShouldNotSetEpisodeEnd_ForSingleEpisodeFiles(string fileName)
+    {
+        var item = new MediaFileItem { OriginalFileName = fileName };
+        _parser.Parse(item);
+        item.ParsedEpisodeEnd.Should().BeNull();
+    }
+
     // ==================== 语言标签转化测试 ====================
 
     [Theory]
