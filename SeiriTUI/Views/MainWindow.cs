@@ -8,8 +8,9 @@ public class MainWindow : Window
 {
     public readonly MainViewModel ViewModel;
 
-    private ListView _leftListView;
-    private ListView _rightListView;
+    private SyncListView _leftListView;
+    private SyncListView _rightListView;
+    private bool _isSyncing; // 滚动同步护卫标志，防止循环触发
 
     // Detail fields - required
     private TextField _detailSeasonField;
@@ -92,6 +93,25 @@ $@"Seiri-TUI · 现代化终端刮削辅助工具
 
         Add(btnAbout);
         UpdateFrameTitles();
+    }
+
+    /// <summary>
+    /// 支持滚动同步的 ListView 子类，通过 TopItemChanged 事件通知外部当前滚动位置变化。
+    /// </summary>
+    private class SyncListView : ListView
+    {
+        private int _lastTopItem = -1;
+        public event Action<int>? TopItemChanged;
+
+        public override void Redraw(Rect bounds)
+        {
+            base.Redraw(bounds);
+            if (TopItem != _lastTopItem)
+            {
+                _lastTopItem = TopItem;
+                TopItemChanged?.Invoke(TopItem);
+            }
+        }
     }
 
     private class CycleButton : Button
@@ -346,7 +366,7 @@ $@"Seiri-TUI · 现代化终端刮削辅助工具
             Height = Dim.Fill(),
             Border = new Border() { BorderStyle = BorderStyle.Rounded }
         };
-        _leftListView = new ListView() { X = 0, Y = 0, Width = Dim.Fill(), Height = Dim.Fill(), AllowsMarking = false };
+        _leftListView = new SyncListView() { X = 0, Y = 0, Width = Dim.Fill(), Height = Dim.Fill(), AllowsMarking = false };
         _leftFrame.Add(_leftListView);
 
         _rightFrame = new FrameView("Output.Preview ()")
@@ -357,11 +377,46 @@ $@"Seiri-TUI · 现代化终端刮削辅助工具
             Height = Dim.Fill(),
             Border = new Border() { BorderStyle = BorderStyle.Rounded }
         };
-        _rightListView = new ListView() { X = 0, Y = 0, Width = Dim.Fill(), Height = Dim.Fill(), AllowsMarking = false };
+        _rightListView = new SyncListView() { X = 0, Y = 0, Width = Dim.Fill(), Height = Dim.Fill(), AllowsMarking = false };
         _rightFrame.Add(_rightListView);
 
         listContainer.Add(_leftFrame, _rightFrame);
+
+        // ---- 双栏滚动同步绑定 ----
         _leftListView.SelectedItemChanged += OnSelectedItemChanged;
+
+        // 右侧列表选中项变化时同步到左侧
+        _rightListView.SelectedItemChanged += (e) =>
+        {
+            if (_isSyncing) return;
+            _isSyncing = true;
+            try
+            {
+                if (_leftListView.SelectedItem != e.Item)
+                    _leftListView.SelectedItem = e.Item;
+                // 触发左侧的选中回调以更新 Detail 面板
+                OnSelectedItemChanged(e);
+            }
+            finally { _isSyncing = false; }
+        };
+
+        // 左侧滚动位置变化时同步到右侧
+        _leftListView.TopItemChanged += (topItem) =>
+        {
+            if (_isSyncing) return;
+            _isSyncing = true;
+            try { _rightListView.TopItem = topItem; }
+            finally { _isSyncing = false; }
+        };
+
+        // 右侧滚动位置变化时同步到左侧
+        _rightListView.TopItemChanged += (topItem) =>
+        {
+            if (_isSyncing) return;
+            _isSyncing = true;
+            try { _leftListView.TopItem = topItem; }
+            finally { _isSyncing = false; }
+        };
 
         // 当多选模式下用户按空格/点击更改了选中状态，我们需要将其同步到 ViewModel (但没有官方的 MarkChanged，所以我们用鼠标事件和键盘事件捕获)
         _leftListView.KeyPress += (e) =>
@@ -615,9 +670,13 @@ $@"Seiri-TUI · 现代化终端刮削辅助工具
             var item = displayItems[e.Item];
             ViewModel.SelectedItem = item;
 
-            // 同步右侧列表选中
-            if (_rightListView.SelectedItem != e.Item)
-                _rightListView.SelectedItem = e.Item;
+            // 同步右侧列表选中（带护卫防止递归）
+            if (!_isSyncing && _rightListView.SelectedItem != e.Item)
+            {
+                _isSyncing = true;
+                try { _rightListView.SelectedItem = e.Item; }
+                finally { _isSyncing = false; }
+            }
 
             // 必须项
             _detailSeasonField.Text = item.Season?.ToString() ?? "";
