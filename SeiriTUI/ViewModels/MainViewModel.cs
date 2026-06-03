@@ -274,6 +274,12 @@ public partial class MainViewModel : ObservableObject
         if (isSubtitle && !string.IsNullOrWhiteSpace(lang))
         {
             langSuffix = $".{lang}";
+            // 双语字幕标签（如 简日双语、繁日雙語）
+            string? bilingualLabel = item.ParsedBilingualLabel;
+            if (!string.IsNullOrWhiteSpace(bilingualLabel))
+            {
+                langSuffix += $".{bilingualLabel}";
+            }
         }
 
         // 最终文件名
@@ -290,7 +296,8 @@ public partial class MainViewModel : ObservableObject
 
     /// <summary>
     /// 字幕匹配模式下的专属命名计算：
-    /// 格式公式：[匹配的目标视频基础名].[字幕组名].[字幕语言].字幕后缀
+    /// 普通格式：[VideoBaseName].[Group].[Lang].ext
+    /// 双语格式：[VideoBaseName].[Lang].双语标签(Group).ext  或  [VideoBaseName].[Lang].双语标签.ext
     /// </summary>
     private void RecalculateSubtitleTargetFileName(MediaFileItem subtitleItem)
     {
@@ -320,19 +327,38 @@ public partial class MainViewModel : ObservableObject
             videoBaseName = $"{showName} - S{season:D2}{epPart}";
         }
 
-        // 3. 构建字幕后缀：.[Group].[Lang].ext (缺失智能消除点号)
-        var suffixParts = new List<string>();
+        // 3. 构建字幕后缀：根据是否双语采用不同的格式
         string? finalRG = !string.IsNullOrWhiteSpace(subtitleItem.ReleaseGroup) ? subtitleItem.ReleaseGroup : (!string.IsNullOrWhiteSpace(GlobalReleaseGroup) ? GlobalReleaseGroup : subtitleItem.ParsedReleaseGroup);
-        if (!string.IsNullOrWhiteSpace(finalRG))
-            suffixParts.Add(finalRG);
 
         string lang = !string.IsNullOrWhiteSpace(subtitleItem.Language)
             ? subtitleItem.Language
             : (!string.IsNullOrWhiteSpace(DefaultSubtitleLanguage) ? DefaultSubtitleLanguage : subtitleItem.ParsedLanguage ?? "");
-        if (!string.IsNullOrWhiteSpace(lang))
-            suffixParts.Add(lang);
 
-        string suffix = suffixParts.Count > 0 ? "." + string.Join(".", suffixParts) : "";
+        string? bilingualLabel = subtitleItem.ParsedBilingualLabel;
+
+        string suffix;
+        if (!string.IsNullOrWhiteSpace(bilingualLabel))
+        {
+            // 双语字幕格式：.{lang}.双语标签  或  .{lang}.双语标签(Group)
+            var parts = new List<string>();
+            if (!string.IsNullOrWhiteSpace(lang))
+                parts.Add(lang);
+            string labelWithGroup = !string.IsNullOrWhiteSpace(finalRG)
+                ? $"{bilingualLabel}({finalRG})"
+                : bilingualLabel;
+            parts.Add(labelWithGroup);
+            suffix = "." + string.Join(".", parts);
+        }
+        else
+        {
+            // 普通字幕格式：.[Group].[Lang].ext
+            var suffixParts = new List<string>();
+            if (!string.IsNullOrWhiteSpace(finalRG))
+                suffixParts.Add(finalRG);
+            if (!string.IsNullOrWhiteSpace(lang))
+                suffixParts.Add(lang);
+            suffix = suffixParts.Count > 0 ? "." + string.Join(".", suffixParts) : "";
+        }
 
         string fileName = $"{videoBaseName}{suffix}{subtitleItem.Extension}";
 

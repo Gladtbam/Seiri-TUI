@@ -366,4 +366,155 @@ public class SubtitleMatchingTests
         sub.TargetFileName.Should().Contain("ShowName - S01E01");
         sub.AssociatedVideoItem.Should().BeNull("非字幕匹配模式下不应设置关联视频");
     }
+
+    // ==================== 双语字幕命名测试 ====================
+
+    /// <summary>
+    /// 双语字幕命名（无字幕组）：
+    /// title.JPSC.ass → title.zh-Hans.简日双语.ass
+    /// </summary>
+    [Fact]
+    public void SubtitleMatching_BilingualJPSC_WithoutGroup_ShouldFormatCorrectly()
+    {
+        var vm = new MainViewModel(new MockFileOperationService());
+        vm.SubtitleMatchingMode = true;
+
+        var video = new MediaFileItem
+        {
+            OriginalFileName = "title.mkv",
+            Extension = ".mkv",
+            FileType = MediaFileType.Video,
+            Season = 1,
+            Episode = 1,
+        };
+
+        var sub = new MediaFileItem
+        {
+            OriginalFileName = "title.JPSC.ass",
+            Extension = ".ass",
+            FileType = MediaFileType.Subtitle,
+            Season = 1,
+            Episode = 1,
+            ParsedLanguage = "zh-Hans",
+            ParsedBilingualLabel = "简日双语"
+            // 无字幕组
+        };
+
+        vm.MediaFiles.Add(video);
+        vm.MediaFiles.Add(sub);
+
+        vm.RecalculateTargetFileName(video);
+        vm.RecalculateTargetFileName(sub);
+
+        // 格式：title.zh-Hans.简日双语.ass
+        sub.TargetFileName.Should().Be("title.zh-Hans.简日双语.ass");
+    }
+
+    /// <summary>
+    /// 双语字幕命名（有字幕组）：
+    /// [Group]title.JPTC.ass → title.zh-Hant.繁日雙語(Group).ass
+    /// </summary>
+    [Fact]
+    public void SubtitleMatching_BilingualJPTC_WithGroup_ShouldFormatCorrectly()
+    {
+        var vm = new MainViewModel(new MockFileOperationService());
+        vm.SubtitleMatchingMode = true;
+
+        var video = new MediaFileItem
+        {
+            OriginalFileName = "title.mkv",
+            Extension = ".mkv",
+            FileType = MediaFileType.Video,
+            Season = 1,
+            Episode = 1,
+        };
+
+        var sub = new MediaFileItem
+        {
+            OriginalFileName = "[Group]title.JPTC.ass",
+            Extension = ".ass",
+            FileType = MediaFileType.Subtitle,
+            Season = 1,
+            Episode = 1,
+            ParsedLanguage = "zh-Hant",
+            ParsedBilingualLabel = "繁日雙語",
+            ReleaseGroup = "Group"
+        };
+
+        vm.MediaFiles.Add(video);
+        vm.MediaFiles.Add(sub);
+
+        vm.RecalculateTargetFileName(video);
+        vm.RecalculateTargetFileName(sub);
+
+        // 格式：title.zh-Hant.繁日雙語(Group).ass
+        sub.TargetFileName.Should().Be("title.zh-Hant.繁日雙語(Group).ass");
+    }
+
+    /// <summary>
+    /// 双语字幕命名（有字幕组 - 简日）：
+    /// [Sakurato]title.JPSC.ass → title.zh-Hans.简日双语(Sakurato).ass
+    /// </summary>
+    [Fact]
+    public void SubtitleMatching_BilingualJPSC_WithGroup_ShouldFormatCorrectly()
+    {
+        var vm = new MainViewModel(new MockFileOperationService());
+        vm.SubtitleMatchingMode = true;
+
+        var video = new MediaFileItem
+        {
+            OriginalFileName = "video_ep01.mkv",
+            Extension = ".mkv",
+            FileType = MediaFileType.Video,
+            Season = 1,
+            Episode = 1,
+        };
+
+        var sub = new MediaFileItem
+        {
+            OriginalFileName = "[Sakurato] sub_ep01.JPSC.ass",
+            Extension = ".ass",
+            FileType = MediaFileType.Subtitle,
+            Season = 1,
+            Episode = 1,
+            ParsedLanguage = "zh-Hans",
+            ParsedBilingualLabel = "简日双语",
+            ReleaseGroup = "Sakurato"
+        };
+
+        vm.MediaFiles.Add(video);
+        vm.MediaFiles.Add(sub);
+
+        vm.RecalculateTargetFileName(video);
+        vm.RecalculateTargetFileName(sub);
+
+        sub.TargetFileName.Should().Be("video_ep01.zh-Hans.简日双语(Sakurato).ass");
+    }
+
+    /// <summary>
+    /// 常规模式下双语字幕也应附加双语标签
+    /// </summary>
+    [Fact]
+    public void NormalMode_BilingualSubtitle_ShouldAppendBilingualLabel()
+    {
+        var vm = new MainViewModel(new MockFileOperationService());
+        vm.SubtitleMatchingMode = false;
+
+        var sub = new MediaFileItem
+        {
+            ParsedShowName = "ShowName",
+            Season = 1,
+            Episode = 1,
+            Extension = ".ass",
+            FileType = MediaFileType.Subtitle,
+            ParsedLanguage = "zh-Hans",
+            ParsedBilingualLabel = "简日双语"
+        };
+
+        vm.RecalculateTargetFileName(sub);
+
+        // 常规模式：语言后缀应包含双语标签
+        sub.TargetFileName.Should().EndWith(".zh-Hans.简日双语.ass");
+        sub.TargetFileName.Should().Contain("ShowName - S01E01");
+    }
 }

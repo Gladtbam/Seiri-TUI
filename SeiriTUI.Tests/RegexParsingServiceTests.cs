@@ -231,17 +231,18 @@ public class RegexParsingServiceTests
     // ==================== 语言标签转化测试 ====================
 
     [Theory]
-    [InlineData("[VCB-Studio] Anime S01E01 [CHS].ass", "zh-Hans")]
-    [InlineData("ShowName.S02E05.CHT.ass", "zh-Hant")]
-    [InlineData("Movie_720p_en_forced.srt", "eng")]
-    [InlineData("Something - 01 - jp.srt", "jpn")]
-    [InlineData("Dual [jp_sc].ass", "zh-Hans")]
-    [InlineData("Anime - 02 (chs&jp).ass", "zh-Hans")]
-    public void Parse_ShouldExtractCorrectLanguage_WithBoundaries(string fileName, string expectedLang)
+    [InlineData("[VCB-Studio] Anime S01E01 [CHS].ass", "zh-Hans", null)]
+    [InlineData("ShowName.S02E05.CHT.ass", "zh-Hant", null)]
+    [InlineData("Movie_720p_en_forced.srt", "eng", null)]
+    [InlineData("Something - 01 - jp.srt", "jpn", null)]
+    [InlineData("Dual [jp_sc].ass", "zh-Hans", "简日双语")]
+    [InlineData("Anime - 02 (chs&jp).ass", "zh-Hans", "简日双语")]
+    public void Parse_ShouldExtractCorrectLanguage_WithBoundaries(string fileName, string expectedLang, string? expectedBilingualLabel)
     {
         var item = new MediaFileItem { OriginalFileName = fileName };
         _parser.Parse(item);
         item.ParsedLanguage.Should().Be(expectedLang);
+        item.ParsedBilingualLabel.Should().Be(expectedBilingualLabel);
     }
 
     /// <summary>
@@ -307,5 +308,47 @@ public class RegexParsingServiceTests
         _parser.Parse(item);
         item.ParsedBitDepth.Should().Be(expectedBitDepth);
         item.ParsedVideoCodec.Should().Be(expectedCodec);
+    }
+    // ==================== 双语字幕识别测试 ====================
+
+    /// <summary>
+    /// 双语字幕标识识别：JPSC, JPTC, chs&jpn, cht&jpn 等常见格式
+    /// </summary>
+    [Theory]
+    [InlineData("title.JPSC.ass", "zh-Hans", "简日双语")]
+    [InlineData("title.jpsc.ass", "zh-Hans", "简日双语")]
+    [InlineData("title.JPTC.ass", "zh-Hant", "繁日雙語")]
+    [InlineData("title.jptc.ass", "zh-Hant", "繁日雙語")]
+    [InlineData("[Group] title.chs&jpn.ass", "zh-Hans", "简日双语")]
+    [InlineData("[Group] title.cht&jpn.ass", "zh-Hant", "繁日雙語")]
+    [InlineData("title.chs&jap.ass", "zh-Hans", "简日双语")]
+    [InlineData("title.cht&jap.ass", "zh-Hant", "繁日雙語")]
+    [InlineData("title.简日.ass", "zh-Hans", "简日双语")]
+    [InlineData("title.繁日.ass", "zh-Hant", "繁日雙語")]
+    [InlineData("title.jp&sc.ass", "zh-Hans", "简日双语")]
+    [InlineData("title.jp&tc.ass", "zh-Hant", "繁日雙語")]
+    public void Parse_ShouldDetectBilingualSubtitle_AndSetLabel(string fileName, string expectedLang, string expectedLabel)
+    {
+        var item = new MediaFileItem { OriginalFileName = fileName };
+        _parser.Parse(item);
+        item.ParsedLanguage.Should().Be(expectedLang);
+        item.ParsedBilingualLabel.Should().Be(expectedLabel);
+    }
+
+    /// <summary>
+    /// 非双语字幕不应设置双语标签
+    /// </summary>
+    [Theory]
+    [InlineData("title.CHS.ass")]
+    [InlineData("title.CHT.ass")]
+    [InlineData("title.SC.ass")]
+    [InlineData("title.TC.ass")]
+    [InlineData("title.en.srt")]
+    [InlineData("title.jp.srt")]
+    public void Parse_ShouldNotSetBilingualLabel_ForSingleLanguage(string fileName)
+    {
+        var item = new MediaFileItem { OriginalFileName = fileName };
+        _parser.Parse(item);
+        item.ParsedBilingualLabel.Should().BeNull();
     }
 }

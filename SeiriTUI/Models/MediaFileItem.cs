@@ -63,6 +63,10 @@ public partial class MediaFileItem : ObservableObject
     [ObservableProperty]
     private string? _parsedLanguage;
 
+    /// <summary>双语字幕标签 (如 "简日双语", "繁日雙語")，由正则识别 JPSC/JPTC 等标识后赋值</summary>
+    [ObservableProperty]
+    private string? _parsedBilingualLabel;
+
     [ObservableProperty]
     private string? _parsedVideoCodec;
 

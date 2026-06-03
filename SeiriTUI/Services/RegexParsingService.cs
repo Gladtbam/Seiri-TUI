@@ -219,8 +219,10 @@ public partial class RegexParsingService
             item.ParsedAudioChannel = channelMatch.Groups[1].Value;
         }
 
-        // 9. 解析字幕外挂语言等
-        item.ParsedLanguage = ParseLanguage(item.OriginalFileName);
+        // 9. 解析字幕外挂语言等（含双语标签识别）
+        var (lang, bilingualLabel) = ParseLanguageInfo(item.OriginalFileName);
+        item.ParsedLanguage = lang;
+        item.ParsedBilingualLabel = bilingualLabel;
 
         // 10. 智能尝试猜测剧集名 (掐头去尾)
         item.ParsedShowName = GuessShowName(name);
@@ -258,9 +260,10 @@ public partial class RegexParsingService
     }
 
     /// <summary>
-    /// 标准化字幕语言代码 (CHS -> zh-Hans)
+    /// 标准化字幕语言代码，并同时识别双语字幕标签。
+    /// 返回 (语言代码, 双语标签)，双语标签仅在识别到 JPSC/JPTC 等双语标识时有值。
     /// </summary>
-    private string? ParseLanguage(string fileName)
+    private (string? Language, string? BilingualLabel) ParseLanguageInfo(string fileName)
     {
         // 去除拓展名，纯看名称主体，并转小写
         string nameLower = Path.GetFileNameWithoutExtension(fileName).ToLowerInvariant();
@@ -273,14 +276,17 @@ public partial class RegexParsingService
             return Regex.IsMatch(nameLower, $@"(?:\W|_|^){pattern}(?:\W|_|$)");
         }
 
-        if (IsLang("(chs.*jp|jp.*chs|jp.*sc|简日)")) return "zh-Hans";
-        if (IsLang("(cht.*jp|jp.*cht|jp.*tc|繁日)")) return "zh-Hant";
-        if (IsLang("(chs|gb|sc|zh-hans|简体|简中)")) return "zh-Hans";
-        if (IsLang("(cht|big5|tc|zh-hant|繁体|正體|繁中)")) return "zh-Hant";
-        if (IsLang("(eng|en|english)")) return "eng";
-        if (IsLang("(jap|jp|ja|japanese|日本語)")) return "jpn";
+        // 优先检测双语标识 (JPSC/JPTC/chs&jpn 等)，返回语言代码 + 双语标签
+        if (IsLang(@"(jpsc|chs[&＆_]?jpn?|jp[&＆_]?sc|chs[&＆_]?jap?|简日)")) return ("zh-Hans", "简日双语");
+        if (IsLang(@"(jptc|cht[&＆_]?jpn?|jp[&＆_]?tc|cht[&＆_]?jap?|繁日)")) return ("zh-Hant", "繁日雙語");
 
-        return null;
+        // 非双语：单语言检测
+        if (IsLang("(chs|gb|sc|zh-hans|简体|简中)")) return ("zh-Hans", null);
+        if (IsLang("(cht|big5|tc|zh-hant|繁体|正體|繁中)")) return ("zh-Hant", null);
+        if (IsLang("(eng|en|english)")) return ("eng", null);
+        if (IsLang("(jap|jp|ja|japanese|日本語)")) return ("jpn", null);
+
+        return (null, null);
     }
 
     private string StandardizeQuality(string original)
